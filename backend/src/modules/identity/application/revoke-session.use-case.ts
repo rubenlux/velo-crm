@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../infrastructure/prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { RefreshTokenService } from '../infrastructure/refresh-token.service';
 import { IdentityAuditPublisher } from '../../../shared/audit/identity-audit.publisher';
 

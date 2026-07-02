@@ -29,7 +29,7 @@ de este plan); el desglose ejecutable por historia de usuario vive en
 Modules:
 
 - Authentication ✅ **implementado** (2026-07-02) — ver estado abajo
-- Organizations
+- Organizations ✅ **implementado** (2026-07-02) — ver estado abajo
 - Users
 - Roles
 - Permissions
@@ -46,9 +46,9 @@ Las 5 historias de usuario están implementadas y testeadas (`backend/src/module
 `frontend/src/features/auth/`): registro/login/logout/verificación de email,
 recuperación y cambio de contraseña, login con Google/Microsoft, gestión de sesiones y
 dispositivos, y MFA por TOTP con códigos de recuperación. 35 tests (contract +
-integration + E2E) pasando contra una base Postgres real. Pendiente explícito: el
-endpoint de aceptación de invitaciones (FR-018) depende de que exista `Organization`/
-`Membership` (spec 005) y no se implementó todavía; el login social no se probó contra
+integration + E2E) pasando contra una base Postgres real. El endpoint de aceptación de
+invitaciones (FR-018), antes diferido por depender de `Organization`/`Membership`, ya
+está implementado — ver spec 005 abajo. El login social no se probó contra
 Google/Microsoft reales (requiere credenciales OAuth que este entorno no tiene) — la
 lógica de creación/vinculación de cuenta sí está testeada con perfiles simulados.
 
@@ -59,6 +59,37 @@ migra a cookies de sesión. Los tests de integración/E2E (`backend/tests/`) com
 única base Postgres real y llaman `resetDatabase()` entre casos, por eso
 `backend/jest.config.js` fija `maxWorkers: 1` — correrlos en paralelo trunca tablas que
 otro worker está usando a mitad de test.
+
+### Estado de implementación — Organizations (spec 005)
+
+Las 5 historias de usuario están implementadas y testeadas
+(`backend/src/modules/organizations/`, `frontend/src/features/organizations/`): crear y
+configurar una Organization (con Membership Propietario automática), branding/
+impuestos/módulos habilitados según plan, invitaciones (cerrando el FR-018 diferido de
+spec 004), cambio de plan con validación de límites, y suspensión/reactivación
+administrativa. 27 tests nuevos (contract + integration + E2E) pasando contra la misma
+base Postgres real, para un total de 62 tests en el backend.
+
+Aislamiento multi-tenant: cada request a un recurso de Organization exige el header
+`X-Organization-Id`, validado por `TenantContextGuard` contra la Membership activa del
+User — ver `specs/005-organizations-multi-tenant/research.md` #1. Se agregó un chequeo
+adicional contra ataques de "confused deputy" (header validado para una Organization,
+`:id` de la URL apuntando a otra). Se encontró y corrigió durante la implementación un
+problema real: `AcceptInvitationUseCase` no verificaba que el email del User autenticado
+coincidiera con el email invitado, lo que permitía que cualquiera con el token de
+invitación se uniera con el rol invitado — ahora se valida y, si no coincide, la
+invitación permanece válida para su destinatario real (queda cubierto por test de
+regresión).
+
+Se introdujo el primer `AuditLog` persistido y consultable de la plataforma
+(`GET /organizations/:id/audit-log`), a diferencia del logger de solo-consola usado como
+seam temporal en `identity` (spec 004) — migrar `identity` a este mismo mecanismo queda
+fuera de alcance de esta fase. El catálogo de planes (`Free`/`Pro`/`Enterprise`, límites
+de usuarios y módulos) se modela como configuración estática en código
+(`backend/src/modules/organizations/infrastructure/plan-catalog.ts`), no como tabla en
+base de datos. La suspensión/reactivación de Organizations (acción administrativa de
+plataforma) se protege con un allowlist de emails vía `PLATFORM_ADMIN_EMAILS`, no con un
+sistema de roles de plataforma completo (fuera de alcance de esta spec).
 
 ---
 

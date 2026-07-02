@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../src/modules/identity/infrastructure/prisma.service';
+import { PrismaService } from '../../src/shared/prisma/prisma.service';
 import { RefreshTokenService } from '../../src/modules/identity/infrastructure/refresh-token.service';
 
 describe('RefreshTokenService rotation & reuse detection (research.md #2)', () => {

@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
 import { Session } from '@prisma/client';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 export interface IssuedRefreshToken {
   session: Session;

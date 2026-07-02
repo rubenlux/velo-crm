@@ -125,3 +125,126 @@ model EmailVerificationToken {
   @@index([userId])
   @@map("email_verification_tokens")
 }
+
+// Organizations module (spec 005-organizations-multi-tenant)
+// See specs/005-organizations-multi-tenant/data-model.md for the source of truth.
+// Membership.userId and OrganizationInvitation.invitedByUserId reference User (above)
+// by id only, without a Prisma relation, to keep the two modules decoupled at the
+// schema level (Modular by Design, Constitution Principle II).
+
+enum OrganizationPlan {
+  Free
+  Pro
+  Enterprise
+}
+
+enum OrganizationStatus {
+  active
+  suspended
+}
+
+enum MembershipRole {
+  Propietario
+  Administrador
+  Gerente
+  Ventas
+  Soporte
+  Contabilidad
+  Inventario
+  RRHH
+  Lector
+}
+
+enum MembershipStatus {
+  active
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  cancelled
+  expired
+}
+
+enum AuditLogAction {
+  OrganizationCreated
+  OrganizationUpdated
+  OrganizationSuspended
+  OrganizationReactivated
+  PlanChanged
+  MemberInvited
+  InvitationCancelled
+  InvitationAccepted
+}
+
+model Organization {
+  id             String             @id @default(uuid())
+  name           String
+  timezone       String
+  currency       String
+  language       String
+  logoUrl        String?
+  customDomain   String?            @unique
+  taxSettings    Json               @default("{}")
+  enabledModules String[]           @default([])
+  plan           OrganizationPlan   @default(Free)
+  status         OrganizationStatus @default(active)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  memberships Membership[]
+  invitations OrganizationInvitation[]
+  auditLogs   AuditLog[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String           @id @default(uuid())
+  userId         String
+  organizationId String
+  role           MembershipRole
+  status         MembershipStatus @default(active)
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model OrganizationInvitation {
+  id              String           @id @default(uuid())
+  organizationId  String
+  email           String
+  role            MembershipRole
+  tokenHash       String
+  status          InvitationStatus @default(pending)
+  invitedByUserId String
+  createdAt       DateTime         @default(now())
+  expiresAt       DateTime
+  resolvedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("organization_invitations")
+}
+
+model AuditLog {
+  id             String         @id @default(uuid())
+  organizationId String
+  actorUserId    String?
+  action         AuditLogAction
+  metadata       Json           @default("{}")
+  occurredAt     DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([occurredAt])
+  @@map("audit_logs")
+}

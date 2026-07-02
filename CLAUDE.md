@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/004-authentication-identity/plan.md (see also docs/implementation-plan.md
+specs/005-organizations-multi-tenant/plan.md (see also docs/implementation-plan.md
 for the overall project roadmap and tech stack).
 <!-- SPECKIT END -->
 
@@ -31,12 +31,14 @@ monolithic "CRM Fase 1" spec before it got decomposed).
 `docs/IMPLEMENTATION.md` (mandatory engineering rules — multi-tenancy, soft delete,
 audit log, no-TODO/no-console.log quality gates).
 
-**Code status**: Spec 004 (Authentication & Identity) is fully implemented — all 5 user
-stories (register/verify/login/logout, password reset/change, Google/Microsoft OAuth,
-session/device management, TOTP MFA) in `backend/` (NestJS + Prisma) and `frontend/`
-(React + Vite), 35 tests passing. Deferred: FR-018 invitation-acceptance endpoint (needs
-spec 005 Organization/Membership, not built yet). Everything else (specs 005-026) is
-spec-only, no implementation yet.
+**Code status**: Specs 004 (Authentication & Identity) and 005 (Organizations,
+Multi-Tenant) are fully implemented — 62 backend tests passing. Spec 004: register/
+verify/login/logout, password reset/change, Google/Microsoft OAuth, session/device
+management, TOTP MFA. Spec 005: create/configure Organization with automatic
+Propietario Membership, branding/tax/modules by plan, invitations (closes spec 004's
+FR-018), plan changes, suspend/reactivate — tenant isolation enforced by
+`TenantContextGuard` (`X-Organization-Id` header + Membership check). Everything else
+(specs 006-026) is spec-only, no implementation yet.
 
 **Local dev DB**: Backend tests run against an isolated Docker container
 (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) — separate

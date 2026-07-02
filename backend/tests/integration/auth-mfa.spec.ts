@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { authenticator } from 'otplib';
 import request from 'supertest';
-import { PrismaService } from '../../src/modules/identity/infrastructure/prisma.service';
+import { PrismaService } from '../../src/shared/prisma/prisma.service';
 import { MfaSecretCipher } from '../../src/modules/identity/infrastructure/mfa-secret-cipher';
 import { createTestApp, resetDatabase } from '../test-app';
 

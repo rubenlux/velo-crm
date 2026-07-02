@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../infrastructure/prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 export interface SessionSummary {
   id: string;

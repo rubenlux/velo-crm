@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { PrismaService } from '../../src/modules/identity/infrastructure/prisma.service';
+import { PrismaService } from '../../src/shared/prisma/prisma.service';
 import { createTestApp, resetDatabase } from '../test-app';
 
 describe('Session management (US4)', () => {

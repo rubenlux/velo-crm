@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { OAuthLoginUseCase } from '../../src/modules/identity/application/oauth-login.use-case';
-import { PrismaService } from '../../src/modules/identity/infrastructure/prisma.service';
+import { PrismaService } from '../../src/shared/prisma/prisma.service';
 import { createTestApp, resetDatabase } from '../test-app';
 
 describe('OAuth account linking to a User registered by email/password (US3)', () => {

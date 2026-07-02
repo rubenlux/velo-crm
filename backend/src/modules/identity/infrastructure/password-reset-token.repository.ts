@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { PasswordResetToken } from '@prisma/client';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 const TOKEN_TTL_MINUTES = 60;
 

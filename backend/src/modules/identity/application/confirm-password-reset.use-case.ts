@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PasswordResetTokenRepository } from '../infrastructure/password-reset-token.repository';
 import { PasswordHasher } from '../infrastructure/password-hasher';
 import { RefreshTokenService } from '../infrastructure/refresh-token.service';
-import { PrismaService } from '../infrastructure/prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { IdentityAuditPublisher } from '../../../shared/audit/identity-audit.publisher';
 import { InvalidOrExpiredTokenError } from '../domain/errors';
 

@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { PrismaService } from './infrastructure/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PasswordHasher } from './infrastructure/password-hasher';
 import { AccessTokenService } from './infrastructure/jwt.service';
 import { RefreshTokenService } from './infrastructure/refresh-token.service';
@@ -82,6 +82,6 @@ import { AuthGuard } from './api/auth.guard';
     OAuthLoginUseCase,
     AuthGuard,
   ],
-  exports: [AuthGuard, AccessTokenService],
+  exports: [AuthGuard, AccessTokenService, PrismaService],
 })
 export class IdentityModule {}

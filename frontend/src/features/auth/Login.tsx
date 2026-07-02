@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApiError, login, verifyMfa } from '../../services/auth-api';
+import { saveSession } from '../../services/session';
 import { OAuthButtons } from './OAuthButtons';
 
 interface LocationState {
@@ -9,13 +10,13 @@ interface LocationState {
 
 export function Login() {
   const location = useLocation();
+  const navigate = useNavigate();
   const justRegistered = Boolean((location.state as LocationState | null)?.justRegistered);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
@@ -33,9 +34,8 @@ export function Login() {
         return;
       }
 
-      // Access/refresh token storage is intentionally out of scope for this MVP
-      // slice; a dedicated session-storage strategy lands with User Story 4.
-      setEmailVerified(result.user.emailVerified);
+      saveSession(result);
+      navigate('/');
     } catch (err) {
       setError(err instanceof AuthApiError ? 'Email o contraseña incorrectos.' : 'No se pudo iniciar sesión.');
     } finally {
@@ -51,8 +51,8 @@ export function Login() {
     setSubmitting(true);
     try {
       const result = await verifyMfa(mfaChallengeToken, mfaCode);
-      setEmailVerified(result.user.emailVerified);
-      setMfaChallengeToken(null);
+      saveSession(result);
+      navigate('/');
     } catch (err) {
       setError(err instanceof AuthApiError ? 'Código incorrecto.' : 'No se pudo verificar el código.');
     } finally {
@@ -117,7 +117,6 @@ export function Login() {
         </label>
 
         {error && <p role="alert">{error}</p>}
-        {emailVerified === false && <p role="status">Tu email todavía no está verificado.</p>}
 
         <button type="submit" disabled={submitting}>
           {submitting ? 'Ingresando…' : 'Ingresar'}

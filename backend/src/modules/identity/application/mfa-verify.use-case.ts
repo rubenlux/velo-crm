@@ -4,7 +4,7 @@ import { AccessTokenService } from '../infrastructure/jwt.service';
 import { RefreshTokenService } from '../infrastructure/refresh-token.service';
 import { TotpService } from '../infrastructure/totp.service';
 import { MfaSecretCipher } from '../infrastructure/mfa-secret-cipher';
-import { PrismaService } from '../infrastructure/prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { UserRepository } from '../infrastructure/user.repository';
 import { IdentityAuditPublisher } from '../../../shared/audit/identity-audit.publisher';
 

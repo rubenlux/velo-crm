@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Device } from '@prisma/client';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 /**
  * Minimal device resolution shared by password and OAuth login. A dedicated

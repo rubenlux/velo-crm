@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../infrastructure/prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { PasswordHasher } from '../infrastructure/password-hasher';
 import { UserRepository } from '../infrastructure/user.repository';
 import { IdentityAuditPublisher } from '../../../shared/audit/identity-audit.publisher';

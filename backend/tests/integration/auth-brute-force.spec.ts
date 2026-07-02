@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { PrismaService } from '../../src/modules/identity/infrastructure/prisma.service';
+import { PrismaService } from '../../src/shared/prisma/prisma.service';
 import { createTestApp, resetDatabase } from '../test-app';
 
 describe('Brute-force protection on /api/v1/auth/login (SC-005)', () => {

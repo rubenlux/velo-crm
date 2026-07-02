@@ -5,15 +5,86 @@ import { Login } from './features/auth/Login';
 import { Register } from './features/auth/Register';
 import { ForgotPassword } from './features/auth/ForgotPassword';
 import { ResetPassword } from './features/auth/ResetPassword';
+import { Home } from './features/auth/Home';
+import { Sessions } from './features/auth/Sessions';
+import { Mfa } from './features/auth/Mfa';
+import { ChangePassword } from './features/auth/ChangePassword';
+import { CreateOrganization } from './features/organizations/CreateOrganization';
+import { OrganizationSettings } from './features/organizations/OrganizationSettings';
+import { Members } from './features/organizations/Members';
+import { PlanBilling } from './features/organizations/PlanBilling';
+import { getSession } from './services/session';
+
+function RequireAuth({ children }: { children: React.ReactElement }) {
+  return getSession() ? children : <Navigate to="/login" replace />;
+}
+
+function SessionsRoute() {
+  const session = getSession();
+  return session ? <Sessions accessToken={session.accessToken} /> : <Navigate to="/login" replace />;
+}
+
+function MfaRoute() {
+  const session = getSession();
+  return session ? <Mfa accessToken={session.accessToken} /> : <Navigate to="/login" replace />;
+}
+
+function ChangePasswordRoute() {
+  const session = getSession();
+  return session ? <ChangePassword accessToken={session.accessToken} /> : <Navigate to="/login" replace />;
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <Home />
+            </RequireAuth>
+          }
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/sessions" element={<SessionsRoute />} />
+        <Route path="/mfa" element={<MfaRoute />} />
+        <Route path="/change-password" element={<ChangePasswordRoute />} />
+        <Route
+          path="/organizations/new"
+          element={
+            <RequireAuth>
+              <CreateOrganization />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId"
+          element={
+            <RequireAuth>
+              <OrganizationSettings />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/members"
+          element={
+            <RequireAuth>
+              <Members />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/plan"
+          element={
+            <RequireAuth>
+              <PlanBilling />
+            </RequireAuth>
+          }
+        />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

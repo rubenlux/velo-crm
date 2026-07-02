@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { EmailVerificationToken } from '@prisma/client';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 const TOKEN_TTL_HOURS = 24;
 
