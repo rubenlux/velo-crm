@@ -1,0 +1,126 @@
+// Prisma schema for the Identity module (spec 004-authentication-identity)
+// See specs/004-authentication-identity/data-model.md for the source of truth.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OAuthProvider {
+  google
+  microsoft
+}
+
+enum SessionStatus {
+  active
+  revoked
+}
+
+enum TokenStatus {
+  pending
+  used
+  expired
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  emailVerifiedAt  DateTime?
+  passwordHash     String?
+  mfaEnabled       Boolean   @default(false)
+  mfaSecret        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  oauthAccounts          OAuthAccount[]
+  sessions               Session[]
+  devices                Device[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+
+  @@map("users")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+  createdAt         DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Device {
+  id             String   @id @default(uuid())
+  userId         String
+  userAgent      String
+  approxLocation String?
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@index([userId])
+  @@map("devices")
+}
+
+model Session {
+  id                    String        @id @default(uuid())
+  userId                String
+  deviceId              String
+  refreshTokenHash      String
+  refreshTokenFamilyId  String
+  status                SessionStatus @default(active)
+  rememberMe            Boolean       @default(false)
+  expiresAt             DateTime
+  lastActivityAt        DateTime      @default(now())
+  createdAt             DateTime      @default(now())
+  revokedAt             DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshTokenFamilyId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String      @id @default(uuid())
+  userId    String
+  tokenHash String
+  status    TokenStatus @default(pending)
+  expiresAt DateTime
+  createdAt DateTime    @default(now())
+  usedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String      @id @default(uuid())
+  userId    String
+  tokenHash String
+  status    TokenStatus @default(pending)
+  expiresAt DateTime
+  createdAt DateTime    @default(now())
+  usedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}

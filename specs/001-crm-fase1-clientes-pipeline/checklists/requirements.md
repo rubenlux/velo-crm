@@ -1,4 +1,4 @@
-# Specification Quality Checklist: CRM Fase 1 — Dashboard Comercial
+# Specification Quality Checklist: CRM Fase 1 (Superseded)
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-07-01
@@ -59,3 +59,9 @@
   001 ya no posee ninguna entidad propia — solo el Dashboard agregador. Se dejó una nota
   sugiriendo evaluar a futuro si conviene renombrarla/fusionarla en una spec de
   Dashboard/Reporting dedicada (Fase 8 del roadmap).
+- 2026-07-01 (quinta pasada, final): se creó spec 026 (Reporting, Dashboards y
+  Analítica), que incluye el Dashboard Comercial como uno de sus cinco dashboards
+  predefinidos, absorbiendo así la última capacidad propia que le quedaba a esta spec.
+  User Story 5 quedó marcada como superseded y el documento completo pasó a Status
+  "Superseded": ya no posee ninguna capacidad activa, se conserva íntegro solo por
+  trazabilidad histórica del proyecto.

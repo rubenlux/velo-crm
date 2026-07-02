@@ -34,11 +34,11 @@ Web app (monorepo): `backend/src/`, `backend/tests/`, `frontend/src/`, `frontend
 
 **Purpose**: Inicialización del monorepo backend/frontend
 
-- [ ] T001 Crear estructura de carpetas `backend/` y `frontend/` per [plan.md](plan.md) § Project Structure
-- [ ] T002 Inicializar proyecto NestJS + TypeScript + Prisma en `backend/` (package.json, tsconfig.json, prisma/schema.prisma base)
-- [ ] T003 [P] Inicializar proyecto React + Vite + TypeScript en `frontend/`
-- [ ] T004 [P] Configurar ESLint + Prettier compartidos para `backend/` y `frontend/`
-- [ ] T005 Configurar conexión a PostgreSQL y variables de entorno base en `backend/prisma/schema.prisma` y `backend/.env.example`
+- [x] T001 Crear estructura de carpetas `backend/` y `frontend/` per [plan.md](plan.md) § Project Structure
+- [x] T002 Inicializar proyecto NestJS + TypeScript + Prisma en `backend/` (package.json, tsconfig.json, prisma/schema.prisma base)
+- [x] T003 [P] Inicializar proyecto React + Vite + TypeScript en `frontend/`
+- [x] T004 [P] Configurar ESLint + Prettier compartidos para `backend/` y `frontend/`
+- [x] T005 Configurar conexión a PostgreSQL y variables de entorno base en `backend/prisma/schema.prisma` y `backend/.env.example`
 
 ---
 
@@ -48,17 +48,24 @@ Web app (monorepo): `backend/src/`, `backend/tests/`, `frontend/src/`, `frontend
 
 **⚠️ CRITICAL**: Ninguna historia de usuario puede empezar hasta completar esta fase
 
-- [ ] T006 Definir modelos Prisma `User`, `OAuthAccount`, `Session`, `Device`, `PasswordResetToken`, `EmailVerificationToken` en `backend/prisma/schema.prisma` (ver [data-model.md](data-model.md))
-- [ ] T007 Generar y aplicar la migración inicial de Prisma para el módulo identity
-- [ ] T008 [P] Crear el esqueleto del módulo NestJS `identity` (carpetas `domain/`, `application/`, `infrastructure/`, `api/`) en `backend/src/modules/identity/`
-- [ ] T009 [P] Implementar hashing de contraseñas con Argon2id en `backend/src/modules/identity/infrastructure/password-hasher.ts` (research.md #1)
-- [ ] T010 [P] Implementar emisión/verificación de access tokens JWT (RS256) en `backend/src/modules/identity/infrastructure/jwt.service.ts` (research.md #2)
-- [ ] T011 Implementar rotación de refresh tokens + detección de reutilización en `backend/src/modules/identity/infrastructure/refresh-token.service.ts` (research.md #2, FR-015)
-- [ ] T012 [P] Configurar `@nestjs/throttler` para endpoints de auth en `backend/src/modules/identity/api/auth-throttler.guard.ts` (research.md #5, FR-014)
-- [ ] T013 [P] Implementar publicador de eventos hacia Audit Log para eventos de identity en `backend/src/shared/audit/identity-audit.publisher.ts` (FR-016)
-- [ ] T014 Implementar `AuthGuard` (JWT) con verificación de Membership/Organization en `backend/src/modules/identity/api/auth.guard.ts` (FR-017)
+- [x] T006 Definir modelos Prisma `User`, `OAuthAccount`, `Session`, `Device`, `PasswordResetToken`, `EmailVerificationToken` en `backend/prisma/schema.prisma` (ver [data-model.md](data-model.md))
+- [x] T007 Generar y aplicar la migración inicial de Prisma para el módulo identity
+- [x] T008 [P] Crear el esqueleto del módulo NestJS `identity` (carpetas `domain/`, `application/`, `infrastructure/`, `api/`) en `backend/src/modules/identity/`
+- [x] T009 [P] Implementar hashing de contraseñas con Argon2id en `backend/src/modules/identity/infrastructure/password-hasher.ts` (research.md #1)
+- [x] T010 [P] Implementar emisión/verificación de access tokens JWT (RS256) en `backend/src/modules/identity/infrastructure/jwt.service.ts` (research.md #2)
+- [x] T011 Implementar rotación de refresh tokens + detección de reutilización en `backend/src/modules/identity/infrastructure/refresh-token.service.ts` (research.md #2, FR-015)
+- [x] T012 [P] Configurar `@nestjs/throttler` para endpoints de auth en `backend/src/modules/identity/api/auth-throttler.guard.ts` (research.md #5, FR-014)
+- [x] T013 [P] Implementar publicador de eventos hacia Audit Log para eventos de identity en `backend/src/shared/audit/identity-audit.publisher.ts` (FR-016)
+- [x] T014 Implementar `AuthGuard` (JWT) con verificación de Membership/Organization en `backend/src/modules/identity/api/auth.guard.ts` (FR-017)
 
 **Checkpoint**: Foundation lista — las historias de usuario pueden empezar
+
+> **Nota de alcance (T014)**: `AuthGuard` verifica el access token JWT y adjunta el
+> `User` autenticado a la request. La verificación de Membership/Organization (qué
+> Organizations puede ver ese User) queda como responsabilidad de un guard propio del
+> módulo Organizations (spec 005), que todavía no tiene código — ese módulo consumirá
+> `AuthGuard` como base sin redefinirlo. No se simuló ni se hardcodeó una verificación
+> de Organization inexistente.
 
 ---
 
@@ -72,25 +79,43 @@ login, logout, y bloqueo tras 5 intentos fallidos.
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Contract test `POST /auth/register` en `backend/tests/contract/auth-register.spec.ts`
-- [ ] T016 [P] [US1] Contract test `POST /auth/login` en `backend/tests/contract/auth-login.spec.ts`
-- [ ] T017 [P] [US1] Integration test flujo registro → verificar email → login → logout en `backend/tests/integration/auth-register-login.spec.ts`
-- [ ] T018 [P] [US1] Integration test bloqueo tras 5 intentos fallidos en 10 min (SC-005) en `backend/tests/integration/auth-brute-force.spec.ts`
+- [x] T015 [P] [US1] Contract test `POST /auth/register` en `backend/tests/contract/auth-register.spec.ts`
+- [x] T016 [P] [US1] Contract test `POST /auth/login` en `backend/tests/contract/auth-login.spec.ts`
+- [x] T017 [P] [US1] Integration test flujo registro → verificar email → login → logout en `backend/tests/integration/auth-register-login.spec.ts`
+- [x] T018 [P] [US1] Integration test bloqueo tras 5 intentos fallidos en 10 min (SC-005) en `backend/tests/integration/auth-brute-force.spec.ts`
+
+> Tests unitarios adicionales (no listados originalmente) se agregaron en
+> `backend/tests/unit/password-hasher.spec.ts` y
+> `backend/tests/unit/refresh-token-reuse.spec.ts` para cubrir hashing y la
+> rotación/detección de reuso de refresh tokens (research.md #1/#2), que los tests
+> HTTP no ejercitan directamente.
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Crear `UserRepository` (Prisma) en `backend/src/modules/identity/infrastructure/user.repository.ts`
-- [ ] T020 [P] [US1] Crear `EmailVerificationTokenRepository` en `backend/src/modules/identity/infrastructure/email-verification-token.repository.ts`
-- [ ] T021 [US1] Implementar `RegisterUseCase` en `backend/src/modules/identity/application/register.use-case.ts` (depende de T019, T020, T009)
-- [ ] T022 [US1] Implementar `LoginUseCase` en `backend/src/modules/identity/application/login.use-case.ts` (depende de T019, T009, T010, T011)
-- [ ] T023 [US1] Implementar `LogoutUseCase` en `backend/src/modules/identity/application/logout.use-case.ts` (depende de T011)
-- [ ] T024 [US1] Implementar `VerifyEmailUseCase` y `ResendVerificationUseCase` en `backend/src/modules/identity/application/verify-email.use-case.ts`
-- [ ] T025 [US1] Implementar `AuthController` (register/login/logout/verify-email/verify-email-resend/refresh) en `backend/src/modules/identity/api/auth.controller.ts`
-- [ ] T026 [US1] Aplicar el guard de rate limiting a login/register (depende de T012, T025)
-- [ ] T027 [US1] Emitir eventos de Audit Log para UserRegistered/UserLoggedIn/UserLoggedOut (depende de T013, T025)
-- [ ] T028 [P] [US1] Construir página de registro en `frontend/src/features/auth/Register.tsx`
-- [ ] T029 [P] [US1] Construir página de login en `frontend/src/features/auth/Login.tsx`
-- [ ] T030 [US1] Implementar cliente `auth-api.ts` (register/login/logout/verify-email) en `frontend/src/services/auth-api.ts`
+- [x] T019 [P] [US1] Crear `UserRepository` (Prisma) en `backend/src/modules/identity/infrastructure/user.repository.ts`
+- [x] T020 [P] [US1] Crear `EmailVerificationTokenRepository` en `backend/src/modules/identity/infrastructure/email-verification-token.repository.ts`
+- [x] T021 [US1] Implementar `RegisterUseCase` en `backend/src/modules/identity/application/register.use-case.ts` (depende de T019, T020, T009)
+- [x] T022 [US1] Implementar `LoginUseCase` en `backend/src/modules/identity/application/login.use-case.ts` (depende de T019, T009, T010, T011)
+- [x] T023 [US1] Implementar `LogoutUseCase` en `backend/src/modules/identity/application/logout.use-case.ts` (depende de T011)
+- [x] T024 [US1] Implementar `VerifyEmailUseCase` y `ResendVerificationUseCase` en `backend/src/modules/identity/application/verify-email.use-case.ts`
+- [x] T025 [US1] Implementar `AuthController` (register/login/logout/verify-email/verify-email-resend/refresh) en `backend/src/modules/identity/api/auth.controller.ts`
+- [x] T026 [US1] Aplicar el guard de rate limiting a login/register (depende de T012, T025)
+- [x] T027 [US1] Emitir eventos de Audit Log para UserRegistered/UserLoggedIn/UserLoggedOut (depende de T013, T025)
+- [x] T028 [P] [US1] Construir página de registro en `frontend/src/features/auth/Register.tsx`
+- [x] T029 [P] [US1] Construir página de login en `frontend/src/features/auth/Login.tsx`
+- [x] T030 [US1] Implementar cliente `auth-api.ts` (register/login/logout/verify-email) en `frontend/src/services/auth-api.ts`
+
+> **Nota de alcance (T026)**: el rate limit actual cuenta toda request a
+> `/auth/register` y `/auth/login` (no solo fallos) bajo la misma clave `ip+email`,
+> lo cual es más estricto que "intentos fallidos" (FR-014). Cumple SC-005 (bloqueo
+> tras 5 en 10 min) pero conviene revisar si se quiere acotar específicamente a
+> fallos antes de producción.
+>
+> **Nota de alcance (T028-T030)**: el almacenamiento de `accessToken`/`refreshToken`
+> en el cliente (localStorage, cookie httpOnly, etc.) y la redirección post-login
+> quedan para cuando se implemente User Story 4 (gestión de sesiones), que es donde
+> el frontend necesita mantener el token entre requests. Por ahora `Login.tsx` valida
+> el flujo (llama a la API, distingue error 401 de éxito) sin persistir la sesión.
 
 **Checkpoint**: User Story 1 funcional y testeable de forma independiente
 
