@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Gestión de Facturación
+# Specification Quality Checklist: Gestión de Proveedores
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-07-01
@@ -32,17 +32,15 @@
 ## Notes
 
 - Validación pasó en la primera iteración; no quedaron marcadores [NEEDS CLARIFICATION].
-- Esta spec resuelve la dependencia hacia adelante que había dejado abierta spec 015
-  (Quotes): `Invoice` ya tiene su propia spec y su ciclo de vida completo (estados,
-  pagos, notas de crédito/débito, anulación). Se actualizaron las referencias de
-  spec 015 ("spec futura de Facturación") para que apunten acá.
-- Mantiene la misma dependencia futura hacia `Product` (Inventory, Fase 4) que ya
-  documentaba spec 015, sin redefinirla.
-- 2026-07-01 (segunda pasada): se extrajo `Payment`/`PaymentMethod` a
-  [specs/017-payments/spec.md](../../017-payments/spec.md) (relación muchos-a-muchos
-  Payment↔Invoice). User Story 2 quedó marcada como superseded; `InvoiceStatus` sigue
-  siendo propiedad de esta spec, pero sus transiciones relacionadas con pagos ahora las
-  dispara spec 017.
-- 2026-07-01 (tercera pasada): la dependencia hacia `Product` quedó resuelta al crear
-  [specs/018-products/spec.md](../../018-products/spec.md); las referencias a "bounded
-  context Inventory, spec futura" se actualizaron para apuntar a 018.
+- No requirió tocar specs previas: `Supplier` ya estaba anticipada en
+  `docs/domain-model.md`/`docs/bounded-contexts.md` (contexto Inventory) pero ninguna
+  spec la definía todavía.
+- Se decidió explícitamente **no** compartir la entidad `Contact` (spec 009, vinculada
+  a Customer) con los contactos de un Supplier: se modelan como `SupplierContact`,
+  concepto análogo pero independiente, para no forzar un acoplamiento entre bounded
+  contexts (CRM vs Inventory) que no aporta valor claro en esta fase.
+- Deja explícitamente pendiente para una spec futura de Pagos a Proveedores: pagos a
+  proveedores y todo lo demás marcado "Fuera de Alcance" en el input.
+- 2026-07-01 (segunda pasada): "órdenes de compra" quedó resuelta al crear
+  [specs/022-purchases/spec.md](../../022-purchases/spec.md); las referencias se
+  actualizaron para apuntar ahí.

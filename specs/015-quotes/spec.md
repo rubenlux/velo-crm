@@ -8,10 +8,9 @@
 **Nota de terminología**: Esta especificación posee la entidad `Quote` del bounded
 context **Sales** (ver [SPEC-003 — Bounded Contexts](../../docs/bounded-contexts.md)).
 Depende de `Customer` (spec 008), `Contact` (spec 009, opcional) y `Opportunity` (spec
-011, opcional); referencia `Product`/servicios del catálogo (bounded context Inventory,
-ver [docs/implementation-plan.md](../../docs/implementation-plan.md) § Phase 4 —
-Inventory/Catalog), cuya spec dedicada todavía no existe: esta feature consume esa
-entidad como dependencia futura y no la redefine (ver Assumptions). Genera `Invoice`
+011, opcional); referencia `Product`/servicios del catálogo, definido en
+[specs/018-products/spec.md](../018-products/spec.md) (bounded context Inventory).
+Genera `Invoice`
 (bounded context Sales) al convertirse; el ciclo de vida completo de Invoice (estados,
 pagos, notas de crédito/débito, anulación) se define en
 [specs/016-invoicing/spec.md](../016-invoicing/spec.md) — esta feature solo especifica
@@ -124,9 +123,9 @@ estado `Convertida` conservando su historial.
 **Acceptance Scenarios**:
 
 1. **Given** una Cotización `Aceptada`, **When** el Vendedor la convierte, **Then** el
-   sistema genera una Factura (entidad definida en su propia spec futura de
-   Facturación) con el mismo Customer, productos, cantidades, precios, descuentos,
-   impuestos y observaciones.
+   sistema genera una Factura (entidad definida en
+   [specs/016-invoicing/spec.md](../016-invoicing/spec.md)) con el mismo Customer,
+   productos, cantidades, precios, descuentos, impuestos y observaciones.
 2. **Given** una conversión ya realizada, **When** se consulta la Cotización original,
    **Then** su estado es `Convertida` y conserva su historial completo con un enlace a
    la Factura generada.
@@ -204,7 +203,7 @@ estado `Convertida` conservando su historial.
   comerciales, tiempo de entrega, forma de pago, garantías).
 - **QuoteLine**: Línea de una Quote (producto o servicio, descripción, cantidad,
   unidad, precio unitario, descuento, impuesto, subtotal); referencia un `Product` del
-  catálogo (bounded context Inventory, spec futura).
+  catálogo (ver [specs/018-products/spec.md](../018-products/spec.md)).
 - **QuoteStatus**: Estado de la Quote: `Borrador`, `Pendiente`, `Enviada`, `Vista`,
   `Aceptada`, `Rechazada`, `Vencida`, `Cancelada`, `Convertida`.
 - **QuoteVersion**: Versión histórica e inmutable de una Quote, con número, fecha,
@@ -236,10 +235,9 @@ estado `Convertida` conservando su historial.
 
 ## Assumptions
 
-- El catálogo de `Product`/servicios (líneas de Cotización) pertenece al bounded
-  context Inventory (Fase 4 del roadmap); esta spec lo referencia como dependencia
-  futura y asume que cada línea puede vincularse a un Product existente o describirse
-  libremente mientras esa spec no exista.
+- El catálogo de `Product`/servicios (líneas de Cotización) se define en
+  [specs/018-products/spec.md](../018-products/spec.md) (bounded context Inventory);
+  cada línea se vincula a un Product existente de ese catálogo.
 - `Invoice` (Facturación) se define en detalle en
   [specs/016-invoicing/spec.md](../016-invoicing/spec.md); esta spec solo especifica
   qué datos de la Quote se copian al convertir (FR-013), sin definir el ciclo de vida

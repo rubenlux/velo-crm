@@ -38,8 +38,11 @@
   terminología y en Assumptions.
 - 2026-07-01: la dependencia hacia `Invoice` quedó resuelta al crear
   [specs/016-invoicing/spec.md](../../016-invoicing/spec.md); todas las referencias a
-  "spec futura de Facturación" se actualizaron para apuntar directamente a 016. La
-  dependencia hacia `Product` (Inventory) sigue abierta.
+  "spec futura de Facturación" se actualizaron para apuntar directamente a 016.
+- 2026-07-01 (segunda pasada): la dependencia hacia `Product` también quedó resuelta al
+  crear [specs/018-products/spec.md](../../018-products/spec.md); todas las referencias
+  a "bounded context Inventory, spec futura" se actualizaron para apuntar a 018. Ya no
+  quedan dependencias abiertas en esta spec.
 - El input no listaba SPEC-010 (Leads) entre las dependencias explícitas, pese a que una
   Cotización puede asociarse a una Opportunity que se originó en un Lead; no se agregó
   como dependencia dura ya que la spec no requiere directamente a Lead, solo a

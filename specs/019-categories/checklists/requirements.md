@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Gestión de Facturación
+# Specification Quality Checklist: Gestión de Categorías
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-07-01
@@ -32,17 +32,8 @@
 ## Notes
 
 - Validación pasó en la primera iteración; no quedaron marcadores [NEEDS CLARIFICATION].
-- Esta spec resuelve la dependencia hacia adelante que había dejado abierta spec 015
-  (Quotes): `Invoice` ya tiene su propia spec y su ciclo de vida completo (estados,
-  pagos, notas de crédito/débito, anulación). Se actualizaron las referencias de
-  spec 015 ("spec futura de Facturación") para que apunten acá.
-- Mantiene la misma dependencia futura hacia `Product` (Inventory, Fase 4) que ya
-  documentaba spec 015, sin redefinirla.
-- 2026-07-01 (segunda pasada): se extrajo `Payment`/`PaymentMethod` a
-  [specs/017-payments/spec.md](../../017-payments/spec.md) (relación muchos-a-muchos
-  Payment↔Invoice). User Story 2 quedó marcada como superseded; `InvoiceStatus` sigue
-  siendo propiedad de esta spec, pero sus transiciones relacionadas con pagos ahora las
-  dispara spec 017.
-- 2026-07-01 (tercera pasada): la dependencia hacia `Product` quedó resuelta al crear
-  [specs/018-products/spec.md](../../018-products/spec.md); las referencias a "bounded
-  context Inventory, spec futura" se actualizaron para apuntar a 018.
+- Esta spec **extrae** `Category` de spec 018 (Products), donde vivía como un campo
+  plano de clasificación. El motivo: una Category real es una jerarquía multinivel con
+  su propio ciclo de vida (activa/archivada, reordenamiento, fusión, prevención de
+  ciclos), igual que ya motivó separar Customer/Contact (008/009) o Payment/Invoice
+  (017/016). Se actualizará spec 018 para reflejar esta extracción.

@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Gestión de Facturación
+# Specification Quality Checklist: Gestión de Pagos
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-07-01
@@ -32,17 +32,10 @@
 ## Notes
 
 - Validación pasó en la primera iteración; no quedaron marcadores [NEEDS CLARIFICATION].
-- Esta spec resuelve la dependencia hacia adelante que había dejado abierta spec 015
-  (Quotes): `Invoice` ya tiene su propia spec y su ciclo de vida completo (estados,
-  pagos, notas de crédito/débito, anulación). Se actualizaron las referencias de
-  spec 015 ("spec futura de Facturación") para que apunten acá.
-- Mantiene la misma dependencia futura hacia `Product` (Inventory, Fase 4) que ya
-  documentaba spec 015, sin redefinirla.
-- 2026-07-01 (segunda pasada): se extrajo `Payment`/`PaymentMethod` a
-  [specs/017-payments/spec.md](../../017-payments/spec.md) (relación muchos-a-muchos
-  Payment↔Invoice). User Story 2 quedó marcada como superseded; `InvoiceStatus` sigue
-  siendo propiedad de esta spec, pero sus transiciones relacionadas con pagos ahora las
-  dispara spec 017.
-- 2026-07-01 (tercera pasada): la dependencia hacia `Product` quedó resuelta al crear
-  [specs/018-products/spec.md](../../018-products/spec.md); las referencias a "bounded
-  context Inventory, spec futura" se actualizaron para apuntar a 018.
+- Esta spec **extrae** `Payment`/`PaymentMethod` de spec 016 (Invoicing), donde vivían
+  de forma simplificada (un Payment ligado a una sola Invoice). El motivo: un Payment
+  real puede aplicarse a varias Invoices y una Invoice puede recibir varios Payments
+  (muchos-a-muchos), lo mismo que motivó separar Customer/Contact (008/009) y
+  Lead/Opportunity (010/011). Se actualizará spec 016 para reflejar esta extracción.
+- `InvoiceStatus` sigue siendo propiedad de spec 016; esta spec solo dispara su
+  recálculo, sin redefinir sus estados posibles.
