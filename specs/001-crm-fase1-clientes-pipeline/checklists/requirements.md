@@ -1,4 +1,4 @@
-# Specification Quality Checklist: CRM Fase 1 — Clientes, Pipeline y Equipo
+# Specification Quality Checklist: CRM Fase 1 — Dashboard Comercial
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-07-01
@@ -38,3 +38,24 @@
   [SPEC-002 — Domain Model](../../../docs/domain-model.md) (Organization, Customer, Lead,
   Contact, Opportunity, Membership, Role, Permission, Activity, Audit Log) en lugar de
   los nombres ad hoc en español usados originalmente.
+- 2026-07-01: Se reestructuró el alcance de esta spec tras crear specs dedicadas por
+  entidad (004 Auth, 005 Organizations, 006 Users, 007 Roles & Permissions, 008
+  Customers, 009 Contacts). User Story 1 se redujo a Leads (captura/calificación/
+  conversión, delegando Customer a spec 008); User Story 4 (Users/Roles/Permissions)
+  quedó marcada como superseded. FRs, Key Entities, Success Criteria y Assumptions se
+  recortaron para eliminar duplicación con esas specs. El detalle histórico completo
+  sigue disponible en git.
+- 2026-07-01 (segunda pasada): se creó spec 010 (Leads) con su propio detalle rico de
+  captura/calificación/conversión; User Story 1 de esta spec también quedó marcada
+  como superseded apuntando a 010. Esta spec 001 quedó momentáneamente con
+  Opportunity/pipeline, Activity y Dashboard.
+- 2026-07-01 (tercera pasada): se creó spec 011 (Opportunities) con el detalle completo
+  de pipeline (etapas configurables, valor ponderado, KPIs, forecast); User Story 2 de
+  esta spec también quedó marcada como superseded apuntando a 011. Esta spec 001 quedó
+  momentáneamente con Activity y Dashboard.
+- 2026-07-01 (cuarta pasada): se creó spec 012 (Activities), declarada explícitamente
+  como la fuente de las "Timeline Entry" ya referenciadas en 008/009/010/011; User
+  Story 3 de esta spec también quedó marcada como superseded apuntando a 012. Esta spec
+  001 ya no posee ninguna entidad propia — solo el Dashboard agregador. Se dejó una nota
+  sugiriendo evaluar a futuro si conviene renombrarla/fusionarla en una spec de
+  Dashboard/Reporting dedicada (Fase 8 del roadmap).

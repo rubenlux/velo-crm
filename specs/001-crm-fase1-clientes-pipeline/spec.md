@@ -1,141 +1,107 @@
-# Feature Specification: CRM Fase 1 — Customers, Pipeline y Equipo
+# Feature Specification: CRM Fase 1 — Dashboard Comercial
 
 **Feature Branch**: `001-crm-fase1-clientes-pipeline`
 **Created**: 2026-07-01
-**Status**: Draft
+**Status**: Draft (parcialmente superseded — ver nota de deprecación)
 **Input**: User description: "Fase 1 del roadmap de Velo CRM (docs/product-vision.md): un CRM completo multi-tenant para PyMEs de servicios, comercios, agencias, software, estudios profesionales y constructoras. Incluye gestión de Empresas (tenants), Usuarios, Roles, Permisos, Clientes, Prospectos, Contactos, Pipeline de ventas, Actividades y Dashboard. Cada empresa opera de forma aislada (multi-tenant), con auditoría y permisos por rol. El objetivo es que una PyME pueda gestionar su relación con clientes y su pipeline comercial completo sin salir de Velo CRM, sentando las bases (usuarios, permisos, auditoría) que compartirán las fases futuras (Agenda, Facturación, Inventario, RRHH, Automatizaciones, Marketplace)."
 
 **Nota de terminología**: Esta especificación usa el lenguaje ubicuo definido en
 [SPEC-002 — Domain Model](../../docs/domain-model.md) (`Organization`, `User`,
 `Membership`, `Role`, `Permission`, `Customer`, `Lead`, `Contact`, `Opportunity`,
-`Activity`, `Audit Log`). El texto de negocio en español ("empresa", "cliente",
-"prospecto") se usa como sinónimo conversacional de estas entidades canónicas.
+`Activity`, `Audit Log`).
+
+**Nota de deprecación (2026-07-01, cuarta actualización)**: Esta spec fue la primera
+formulación de la Fase 1 del CRM y originalmente cubría Organization/Users/Roles/
+Customers/Contacts/Leads/Opportunities/Activities/Dashboard en un solo documento. A
+medida que el proyecto avanzó, ese alcance se dividió en specs propias por entidad.
+Esta spec ya **NO** es dueña de:
+
+- `Organization` (creación, plan, branding) → [specs/005-organizations-multi-tenant](../005-organizations-multi-tenant/spec.md)
+- Autenticación/sesiones de `User` → [specs/004-authentication-identity](../004-authentication-identity/spec.md)
+- Perfil y ciclo de vida de `User` → [specs/006-users](../006-users/spec.md)
+- `Role`/`Permission` (RBAC) → [specs/007-roles-permissions](../007-roles-permissions/spec.md)
+- `Customer` → [specs/008-customers](../008-customers/spec.md)
+- `Contact` → [specs/009-contacts](../009-contacts/spec.md)
+- `Lead` (captura, calificación, conversión) → [specs/010-leads](../010-leads/spec.md)
+- `Opportunity`/pipeline (etapas, valor ponderado, KPIs, forecast) → [specs/011-opportunities](../011-opportunities/spec.md)
+- `Activity` (registro, adjuntos, comentarios, timeline) → [specs/012-activities](../012-activities/spec.md)
+
+Esta spec conserva únicamente lo que todavía no tiene una spec propia: el **Dashboard**
+comercial, que agrega y resume datos de todas las specs anteriores. Las Historias de
+Usuario 1 (Leads), 2 (Opportunities/pipeline), 3 (Activities) y 4 (Users/Roles/
+Permissions) originales se reemplazaron por referencias a esas specs; no se eliminan del
+historial de git para preservar la trazabilidad de la decisión. Dado que ya no queda
+ninguna capacidad propia además del Dashboard, evaluar en el futuro si esta spec debería
+renombrarse/fusionarse directamente en una eventual spec de Dashboard/Reporting (ver
+Fase 8, Reporting, en [docs/implementation-plan.md](../../docs/implementation-plan.md)).
+
+## Clarifications
+
+### Session 2026-07-01
+
+- Q: ¿Cuál es el primer release de Velo CRM? → A: Solo CRM (esta feature, hoy dividida
+  en 001/008/009/010/011/012); el resto de las fases del roadmap (Facturación,
+  Inventario, RRHH, etc.) no forman parte del MVP.
+- Q: ¿Qué queda explícitamente fuera de alcance del MVP? → A: Contabilidad, Nómina,
+  Manufactura, Marketplace, API Pública y AI Agents (ver
+  [docs/clarifications-mvp.md](../../docs/clarifications-mvp.md)).
+- Q: ¿Un User puede pertenecer a varias Organizations con Roles distintos en cada una? →
+  A: Sí, vía una Membership independiente por Organization (ver spec 005/007).
+- Q: ¿La IA puede definir o ejecutar reglas de negocio críticas en este MVP? → A: No; la
+  IA (Fase 6 del roadmap) queda fuera de alcance y, cuando exista, solo asistirá sin
+  reemplazar reglas de negocio deterministas (Constitución, Principio IX).
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Gestión de Customers, Leads y Contacts (Priority: P1)
+### User Story 1 - Superseded: Captura, calificación y conversión de Leads
 
-Como usuario comercial de una PyME, quiero registrar y consultar mis Customers, Leads
-y sus Contacts en un único lugar, para dejar de depender de planillas y chats sueltos
-y tener siempre a mano la información de con quién estoy hablando.
-
-**Why this priority**: Es el valor central de un CRM. Sin esto no hay producto: es lo
-mínimo que ya reemplaza el Excel/WhatsApp que usa hoy la PyME.
-
-**Independent Test**: Puede probarse creando una Organization, dando de alta un Customer
-y un Lead con sus Contacts, y verificando que se pueden buscar, editar y consultar sin
-ninguna otra funcionalidad implementada.
-
-**Acceptance Scenarios**:
-
-1. **Given** una Organization activa en el sistema, **When** un usuario comercial crea un
-   nuevo Lead con nombre, datos de contacto y origen, **Then** el Lead queda visible en
-   el listado de esa Organization con su información completa.
-2. **Given** un Customer existente, **When** el usuario agrega un nuevo Contact asociado
-   (persona de la organización cliente), **Then** ese Contact aparece vinculado al
-   Customer y es consultable desde su ficha.
-3. **Given** un Lead calificado, **When** el usuario lo convierte en Customer,
-   **Then** se conserva su historial y pasa a listarse como Customer.
-4. **Given** dos Organizations distintas usando el sistema, **When** un usuario de la
-   Organization A busca Customers, **Then** solo ve los registros de la Organization A,
-   nunca los de la Organization B.
+> **Esta historia fue reemplazada.** Ahora vive en
+> [specs/010-leads/spec.md](../010-leads/spec.md). Se conserva este encabezado
+> únicamente para trazabilidad histórica; no agregar nuevos requisitos acá.
 
 ---
 
-### User Story 2 - Pipeline de ventas (Opportunities) (Priority: P2)
+### User Story 2 - Superseded: Pipeline de ventas (Opportunities)
 
-Como usuario comercial, quiero mover mis Opportunities de negocio a través de las etapas
-de mi proceso de venta, para saber en qué estado está cada negociación y priorizar mi
-trabajo del día.
-
-**Why this priority**: Es el segundo pilar del CRM: convierte el listado de contactos en
-una herramienta de gestión activa del negocio, no solo una libreta de direcciones.
-
-**Independent Test**: Con Customers/Leads ya creados (US1), puede probarse creando una
-Opportunity, moviéndola entre etapas y verificando que el pipeline refleja su estado
-actual, sin necesidad de Activities ni dashboard.
-
-**Acceptance Scenarios**:
-
-1. **Given** un Lead existente, **When** el usuario crea una Opportunity asociada,
-   **Then** la Opportunity aparece en la primera etapa (Nuevo) del pipeline de su
-   Organization.
-2. **Given** una Opportunity en una etapa del pipeline, **When** el usuario la mueve a la
-   siguiente etapa, **Then** el sistema registra el cambio de etapa con fecha y usuario
-   responsable.
-3. **Given** una Opportunity, **When** el usuario la marca como "Ganado" o "Perdido",
-   **Then** la Opportunity se cierra y deja de aparecer entre las abiertas, pero
-   permanece consultable en el historial.
+> **Esta historia fue reemplazada.** Ahora vive en
+> [specs/011-opportunities/spec.md](../011-opportunities/spec.md). Se conserva este
+> encabezado únicamente para trazabilidad histórica; no agregar nuevos requisitos acá.
 
 ---
 
-### User Story 3 - Activities y seguimiento comercial (Priority: P3)
+### User Story 3 - Superseded: Activities y seguimiento comercial
 
-Como usuario comercial, quiero registrar llamadas, reuniones y tareas asociadas a un
-Customer, Lead u Opportunity, para no perder el seguimiento de lo que ya hice y lo que
-falta hacer.
-
-**Why this priority**: Refuerza la trazabilidad del proceso comercial una vez que ya
-existen Customers y pipeline, evitando que el seguimiento vuelva a dispersarse en agendas
-externas.
-
-**Independent Test**: Con un Customer u Opportunity ya creados, puede probarse
-registrando una Activity, marcándola como completada y verificando que queda en el
-historial asociado, de forma independiente del dashboard.
-
-**Acceptance Scenarios**:
-
-1. **Given** un Customer o una Opportunity, **When** el usuario registra una Activity
-   (llamada, reunión o tarea) con fecha, **Then** la Activity queda listada en el
-   historial de ese Customer/Opportunity.
-2. **Given** una Activity pendiente, **When** el usuario la marca como completada,
-   **Then** se registra la fecha de finalización y deja de contar como pendiente.
-3. **Given** una Activity con fecha futura, **When** llega esa fecha sin haberse
-   completado, **Then** el sistema la muestra como vencida en el listado del usuario
-   responsable.
+> **Esta historia fue reemplazada.** Ahora vive en
+> [specs/012-activities/spec.md](../012-activities/spec.md). Se conserva este
+> encabezado únicamente para trazabilidad histórica; no agregar nuevos requisitos acá.
 
 ---
 
-### User Story 4 - Administración de Users, Roles y Permissions (Priority: P4)
+### User Story 4 - Superseded: Administración de Users, Roles y Permissions
 
-Como administrador de la Organization, quiero invitar Users a mi cuenta y asignarles un
-Role con Permissions específicos, para controlar quién puede ver y modificar la
-información comercial de mi empresa.
-
-**Why this priority**: Es la base de seguridad y multi-tenencia (Membership) que las
-fases futuras (Agenda, Facturación, RRHH, etc.) reutilizarán, pero el CRM ya es usable
-con un único User administrador mientras se implementa el resto.
-
-**Independent Test**: Puede probarse invitando un segundo User a una Organization,
-asignándole un Role con Permissions limitados y verificando que no puede acceder a las
-acciones restringidas, independientemente de Customers/pipeline/Activities.
-
-**Acceptance Scenarios**:
-
-1. **Given** una Organization registrada, **When** el administrador invita a un nuevo
-   User por correo electrónico, **Then** el User recibe una Membership a esa Organization
-   una vez acepta la invitación.
-2. **Given** un User con Role "Ventas", **When** intenta eliminar un Customer (Permission
-   `customer.delete`, reservada al Role "Administrador"), **Then** el sistema deniega la
-   acción y la registra en el Audit Log.
-3. **Given** una acción relevante (crear, editar, eliminar un Customer/Opportunity),
-   **When** ocurre, **Then** queda registrada en el Audit Log de la Organization con
-   User, fecha y acción realizada.
+> **Esta historia fue reemplazada.** La administración de invitaciones, Membership,
+> Roles y Permissions ahora vive en
+> [specs/005-organizations-multi-tenant](../005-organizations-multi-tenant/spec.md)
+> (invitaciones), [specs/006-users](../006-users/spec.md) (ciclo de vida del User) y
+> [specs/007-roles-permissions](../007-roles-permissions/spec.md) (RBAC completo). Se
+> conserva este encabezado únicamente para trazabilidad histórica; no agregar nuevos
+> requisitos acá.
 
 ---
 
-### User Story 5 - Dashboard comercial (Priority: P5)
+### User Story 5 - Dashboard comercial (Priority: P1) 🎯
 
 Como usuario comercial o administrador, quiero ver un panel con los indicadores clave de
 mi actividad comercial (Customers, Opportunities abiertas, Activities pendientes), para
 entender de un vistazo cómo va el negocio sin tener que recorrer cada módulo.
 
-**Why this priority**: Aporta valor una vez que ya existen datos de Customers, pipeline y
-Activities; sin esos módulos no hay nada que mostrar.
+**Why this priority**: Es la única capacidad propia que le queda a esta spec: agrega en
+un solo lugar datos que ya viven en Customers (008), Leads (010), Opportunities (011) y
+Activities (012).
 
-**Independent Test**: Con datos ya cargados de Customers, Opportunities y Activities,
-puede probarse accediendo al dashboard y verificando que los indicadores coinciden con
-los datos reales de esa Organization.
+**Independent Test**: Con datos ya cargados de Customers (spec 008), Opportunities
+(spec 011) y Activities (spec 012), puede probarse accediendo al dashboard y verificando
+que los indicadores coinciden con los datos reales de esa Organization.
 
 **Acceptance Scenarios**:
 
@@ -151,126 +117,46 @@ los datos reales de esa Organization.
 
 ### Edge Cases
 
-- ¿Qué sucede si se intenta crear un Customer/Lead con datos de Contact duplicados
-  (mismo email o teléfono) dentro de la misma Organization? El sistema debe advertir
-  sobre el posible duplicado antes de confirmar la creación.
-- ¿Cómo maneja el sistema el intento de un User de acceder a datos de una Organization a
-  la que no pertenece (por ejemplo, manipulando una URL o ID)? Debe denegarse el acceso y
-  registrarse el intento en el Audit Log.
-- ¿Qué ocurre si se elimina la única Membership con Role administrador de una
-  Organization? El sistema debe impedir esa acción para evitar que la Organization quede
-  sin administrador.
-- ¿Cómo se comporta el pipeline si se elimina una etapa que tiene Opportunities activas
-  en curso? Las Opportunities deben reasignarse a una etapa válida antes de permitir
-  eliminar la etapa.
-- ¿Qué pasa si dos Users editan el mismo Customer u Opportunity al mismo tiempo? Debe
-  conservarse el último cambio guardado sin corromper el registro, informando al segundo
-  User que los datos se actualizaron.
+- ¿Qué pasa si el dashboard se consulta antes de que exista ningún dato cargado en la
+  Organization? El sistema MUST mostrar el panel con valores en cero, no un error.
+- ¿Qué pasa si alguna de las specs de las que el dashboard agrega datos (008/010/011/
+  012) no está disponible o falla? El sistema MUST degradar mostrando el resto de los
+  indicadores disponibles, no bloquear todo el panel por una sola fuente de datos.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: El sistema MUST permitir crear una Organization como contenedor aislado
-  (tenant) de todos sus datos comerciales.
-- **FR-002**: El sistema MUST garantizar que ningún User pueda ver o modificar datos de
-  una Organization con la que no tiene Membership.
-- **FR-003**: El sistema MUST permitir invitar Users a una Organization mediante una
-  Membership y asignarles un Role (por ejemplo: Administrador, Gerente, Ventas).
-- **FR-004**: El sistema MUST restringir las acciones disponibles a cada User según los
-  Permissions de su Role (convención `recurso.acción`, ej. `customer.read`,
-  `customer.write`, `opportunity.write`).
-- **FR-005**: El sistema MUST impedir que una Organization quede sin al menos una
-  Membership con Role Administrador.
-- **FR-006**: El sistema MUST permitir crear, editar, consultar y eliminar Customers y
-  Leads, incluyendo sus datos de Contact principales.
-- **FR-007**: El sistema MUST permitir asociar uno o más Contacts a un Customer o Lead.
-- **FR-008**: El sistema MUST permitir convertir un Lead en Customer conservando su
-  historial de Activities y Opportunities.
-- **FR-009**: El sistema MUST permitir crear Opportunities asociadas a un Customer o
-  Lead.
-- **FR-010**: El sistema MUST organizar las Opportunities en etapas de un pipeline
-  configurable por Organization, con un conjunto de etapas por defecto (Nuevo,
-  Calificado, Propuesta, Negociación, Ganado, Perdido).
-- **FR-011**: El sistema MUST registrar quién y cuándo movió una Opportunity de etapa.
-- **FR-012**: El sistema MUST permitir cerrar una Opportunity como "Ganado" o "Perdido"
-  sin eliminar su historial.
-- **FR-013**: El sistema MUST permitir registrar Activities (llamada, reunión, tarea)
-  asociadas a un Customer, Lead u Opportunity, con fecha y responsable.
-- **FR-014**: El sistema MUST permitir marcar una Activity como completada y distinguir
-  las Activities pendientes de las vencidas.
-- **FR-015**: El sistema MUST registrar en el Audit Log las acciones relevantes
-  (creación, edición, eliminación) sobre Customers, Leads, Opportunities y
-  Users/Memberships, incluyendo quién y cuándo las realizó.
-- **FR-016**: El sistema MUST advertir sobre posibles duplicados (mismo email o teléfono)
-  al crear un Customer o Lead dentro de la misma Organization.
-- **FR-017**: El sistema MUST proveer un dashboard por Organization con el total de
-  Customers, Leads, Opportunities abiertas por etapa y Activities pendientes/vencidas.
-- **FR-018**: El sistema MUST permitir buscar Customers, Leads y Contacts por nombre,
-  Organization asociada o datos de contacto.
+- **FR-001**: El sistema MUST proveer un dashboard por Organization con el total de
+  Customers (spec 008), Leads (spec 010), Opportunities abiertas por etapa (spec 011) y
+  Activities pendientes/vencidas (spec 012).
+- **FR-002**: El sistema MUST reflejar en el dashboard los cambios de Customers,
+  Opportunities y Activities dentro de los tiempos definidos en Success Criteria.
+
+> Requisitos de Organization, autenticación, perfil de User y RBAC se movieron a specs
+> 004-007; los de Customer/Contact a specs 008-009; los de Lead a spec 010; los de
+> Opportunity/pipeline a spec 011; los de Activity a spec 012. No se duplican acá.
 
 ### Key Entities
 
-Entidades tomadas directamente del lenguaje ubicuo definido en
-[SPEC-002 — Domain Model](../../docs/domain-model.md):
-
-- **Organization**: Empresa que usa Velo CRM; contenedor aislado (tenant) de todos los
-  datos comerciales; tiene una o más Memberships y al menos un Administrador.
-- **User**: Persona con acceso a una o más Organizations a través de una Membership.
-- **Membership**: Relación entre un User y una Organization; define el Role (y por
-  extensión los Permissions) de ese User dentro de esa Organization.
-- **Role**: Agrupa Permissions dentro de una Organization. Esta fase usa Administrador,
-  Gerente y Ventas; Soporte y Contabilidad quedan reservados para fases futuras.
-- **Permission**: Acción autorizada sobre un recurso (`recurso.acción`, ej.
-  `customer.write`, `opportunity.write`, `activity.write`).
-- **Customer**: Organización o persona con la que la empresa ya tiene una relación
-  comercial activa; agrupa Contacts, Opportunities y Activities.
-- **Lead**: Organización o persona en evaluación comercial, aún sin relación activa;
-  puede evolucionar hacia Customer.
-- **Contact**: Persona individual asociada a un Customer o Lead (nombre, cargo, email,
-  teléfono).
-- **Opportunity**: Negociación de venta asociada a un Customer o Lead; avanza por etapas
-  del pipeline hasta cerrarse como Ganado o Perdido.
-- **Activity**: Llamada, reunión, tarea o nota asociada a un Customer, Lead u
-  Opportunity, con fecha, responsable y estado (pendiente, completada, vencida).
-- **Audit Log**: Registro inmutable de acciones críticas (quién, cuándo, qué acción,
-  sobre qué entidad) dentro de una Organization.
+Esta spec no define entidades propias: el Dashboard es una vista agregada de solo
+lectura sobre `Customer` (008), `Lead` (010), `Opportunity` (011) y `Activity` (012).
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Un usuario nuevo puede crear su primer Customer o Lead en menos de
-  2 minutos desde que ingresa al sistema.
-- **SC-002**: El sistema soporta al menos 50 Organizations activas de forma simultánea
-  sin que los datos de una sean visibles para otra.
-- **SC-003**: El 90% de las búsquedas de Customers/Leads/Contacts devuelven resultados en
-  menos de 2 segundos.
-- **SC-004**: Un usuario comercial puede mover una Opportunity entre etapas del pipeline
-  en menos de 10 segundos, sin recargar la página completa.
-- **SC-005**: El 100% de las acciones de creación, edición y eliminación sobre Customers,
-  Leads, Opportunities y Users/Memberships quedan registradas en el Audit Log,
-  verificable mediante consulta del log.
-- **SC-006**: Una PyME con hasta 5 Users puede gestionar todo su ciclo comercial (alta de
-  Lead → Opportunity → cierre) sin salir de Velo CRM durante la prueba de aceptación.
-- **SC-007**: El dashboard de una Organization refleja cambios en Customers, Opportunities
-  o Activities en menos de 5 segundos después de realizados.
+- **SC-001**: El dashboard de una Organization refleja cambios en Customers,
+  Opportunities o Activities en menos de 5 segundos después de realizados.
+- **SC-002**: Una PyME con hasta 5 Users puede gestionar todo su ciclo comercial (alta de
+  Lead → Opportunity → cierre) y verlo reflejado en el dashboard, combinando esta spec
+  con 008/009/010/011/012.
 
 ## Assumptions
 
-- Un User puede tener Membership en una o más Organizations, pero cada sesión opera en
-  el contexto de una única Organization a la vez (selección de Organization activa).
-- Los Roles por defecto de esta fase son Administrador, Gerente y Ventas; Soporte y
-  Contabilidad (mencionados en el Domain Model) se incorporan en fases futuras junto con
-  Facturación e Inventario.
-- Las etapas del pipeline de Opportunity vienen con un set por defecto (Nuevo,
-  Calificado, Propuesta, Negociación, Ganado, Perdido, alineado con el Domain Model) y
-  son editables por el Administrador de cada Organization.
-- La invitación de Users se realiza por correo electrónico; no se incluyen en esta fase
-  inicios de sesión federados (SSO) ni integración con directorios corporativos.
 - El dashboard de esta fase muestra métricas agregadas propias del CRM (Customers,
   pipeline, Activities); no incluye reportes financieros, que corresponden a fases
-  futuras (Facturación).
-- La detección de duplicados se basa en coincidencia exacta de email o teléfono dentro
-  de la misma Organization; no se incluyen algoritmos de coincidencia difusa en esta
-  fase.
+  futuras (Facturación) ni un motor de Reporting genérico (Fase 8 del roadmap).
+- Quedan explícitamente fuera de alcance de este MVP: Contabilidad, Nómina,
+  Manufactura, Marketplace, API Pública y AI Agents. Estas capacidades corresponden a
+  fases posteriores del roadmap (ver [docs/product-vision.md](../../docs/product-vision.md)).

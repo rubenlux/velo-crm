@@ -3,7 +3,7 @@
 **Feature Branch**: `005-organizations-multi-tenant`
 **Created**: 2026-07-01
 **Status**: Draft
-**Input**: User description: "SPEC-005 — Organizations (Multi-Tenant). Permitir que múltiples empresas utilicen VELO de forma completamente aislada, cada una como un Tenant independiente: crear/editar/suspender/reactivar organización, el creador se convierte en Owner automáticamente, invitar usuarios, configurar branding/moneda/impuestos/módulos habilitados/plan, con aislamiento estricto de datos entre organizaciones y auditoría de creación, actualización, suspensión, cambio de plan e invitaciones."
+**Input**: User description: "SPEC-005 — Organizations (Multi-Tenant). Permitir que múltiples empresas utilicen VELO de forma completamente aislada, cada una como un Tenant independiente: crear/editar/suspender/reactivar organización, el creador se convierte en Propietario automáticamente, invitar usuarios, configurar branding/moneda/impuestos/módulos habilitados/plan, con aislamiento estricto de datos entre organizaciones y auditoría de creación, actualización, suspensión, cambio de plan e invitaciones."
 
 **Nota de terminología**: Esta especificación posee la entidad `Organization` dentro del
 bounded context **Organization** (ver [SPEC-003 — Bounded Contexts](../../docs/bounded-contexts.md)),
@@ -14,7 +14,7 @@ precondición que ya asumían como dada [specs/001-crm-fase1-clientes-pipeline/s
 (FR-017: acceso solo a Organizations con Membership activa). Esta feature no redefine
 cómo se autentica un User (004) ni cómo se le asigna un Role dentro de una Organization
 vía Membership (004/001 US4); solo define la creación, configuración y ciclo de vida de
-la propia Organization, y el rol especial **Owner** que reciben automáticamente sus
+la propia Organization, y el rol especial **Propietario** que reciben automáticamente sus
 creadores.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -29,18 +29,18 @@ gestionar mi negocio.
 (CRM, Auth, Facturación) tiene sentido sin que exista al menos una Organization.
 
 **Independent Test**: Puede probarse creando una Organization con nombre, zona horaria,
-moneda e idioma, y verificando que su creador queda automáticamente con rol Owner, sin
+moneda e idioma, y verificando que su creador queda automáticamente con rol Propietario, sin
 depender de invitaciones, branding ni cambios de plan.
 
 **Acceptance Scenarios**:
 
 1. **Given** un User autenticado sin Organization propia, **When** crea una nueva
    Organization indicando nombre, zona horaria, moneda e idioma, **Then** la Organization
-   queda creada y ese User recibe automáticamente una Membership con rol Owner.
+   queda creada y ese User recibe automáticamente una Membership con rol Propietario.
 2. **Given** una Organization recién creada, **When** se consulta su configuración,
    **Then** incluye los valores por defecto de zona horaria, moneda, idioma y plan
    asignados en la creación.
-3. **Given** un Owner, **When** edita el nombre, zona horaria, moneda o idioma de su
+3. **Given** un Propietario, **When** edita el nombre, zona horaria, moneda o idioma de su
    Organization, **Then** los cambios se reflejan de inmediato para todos los Users con
    Membership en ella.
 4. **Given** dos Organizations distintas, **When** se compara su configuración y datos,
@@ -51,7 +51,7 @@ depender de invitaciones, branding ni cambios de plan.
 
 ### User Story 2 - Configurar branding, moneda, impuestos y módulos habilitados (Priority: P2)
 
-Como Owner de una Organization, quiero personalizar su branding (logo, dominio) y
+Como Propietario de una Organization, quiero personalizar su branding (logo, dominio) y
 configurar moneda, impuestos y qué módulos de VELO están habilitados, para adaptar la
 plataforma a la identidad y necesidades de mi empresa.
 
@@ -65,24 +65,24 @@ verificando que esos cambios se reflejan en la configuración de esa Organizatio
 
 **Acceptance Scenarios**:
 
-1. **Given** una Organization existente, **When** el Owner configura su logo y dominio,
+1. **Given** una Organization existente, **When** el Propietario configura su logo y dominio,
    **Then** esa identidad visual se aplica a todas las vistas de esa Organization.
-2. **Given** una Organization existente, **When** el Owner configura sus impuestos
+2. **Given** una Organization existente, **When** el Propietario configura sus impuestos
    aplicables, **Then** esa configuración queda disponible para los módulos que la
    requieran (por ejemplo, Facturación en fases futuras).
 3. **Given** una Organization con varios módulos disponibles según su plan, **When** el
-   Owner habilita o deshabilita un módulo, **Then** los Users de esa Organization ven
+   Propietario habilita o deshabilita un módulo, **Then** los Users de esa Organization ven
    reflejado ese cambio en la disponibilidad del módulo correspondiente.
 
 ---
 
 ### User Story 3 - Invitar usuarios a la organización (Priority: P3)
 
-Como Owner de una Organization, quiero invitar a otras personas de mi equipo, para que
+Como Propietario de una Organization, quiero invitar a otras personas de mi equipo, para que
 puedan colaborar dentro de mi Organization con el rol que yo les asigne.
 
 **Why this priority**: Extiende el valor de la Organization a un equipo, pero una
-Organization de un solo Owner ya es utilizable (US1/US2).
+Organization de un solo Propietario ya es utilizable (US1/US2).
 
 **Independent Test**: Puede probarse invitando un email a una Organization existente y
 verificando que, tras aceptar la invitación, esa persona obtiene una Membership en esa
@@ -90,21 +90,21 @@ Organization exclusivamente.
 
 **Acceptance Scenarios**:
 
-1. **Given** una Organization con cupos disponibles según su plan, **When** el Owner
+1. **Given** una Organization con cupos disponibles según su plan, **When** el Propietario
    invita a un nuevo email, **Then** se dispara el flujo de invitación/autenticación
    (ver [specs/004-authentication-identity/spec.md](../004-authentication-identity/spec.md))
    y, al aceptarse, se crea una Membership en esa Organization.
 2. **Given** una Organization que alcanzó el límite de usuarios de su plan, **When** el
-   Owner intenta invitar a un usuario adicional, **Then** el sistema rechaza la
+   Propietario intenta invitar a un usuario adicional, **Then** el sistema rechaza la
    invitación e indica que debe aumentar su plan.
-3. **Given** una invitación pendiente, **When** el Owner la cancela antes de que sea
+3. **Given** una invitación pendiente, **When** el Propietario la cancela antes de que sea
    aceptada, **Then** el enlace de invitación deja de ser válido.
 
 ---
 
 ### User Story 4 - Cambiar de plan (Priority: P4)
 
-Como Owner de una Organization, quiero cambiar el plan contratado, para ajustar los
+Como Propietario de una Organization, quiero cambiar el plan contratado, para ajustar los
 límites y módulos disponibles a medida que crece o cambian las necesidades de mi
 empresa.
 
@@ -117,10 +117,10 @@ consecuencia.
 
 **Acceptance Scenarios**:
 
-1. **Given** una Organization en un plan determinado, **When** el Owner cambia a un plan
+1. **Given** una Organization en un plan determinado, **When** el Propietario cambia a un plan
    superior, **Then** los nuevos límites y módulos quedan disponibles de inmediato.
 2. **Given** una Organization en un plan superior con módulos o usuarios que exceden los
-   límites de un plan inferior, **When** el Owner intenta bajar de plan, **Then** el
+   límites de un plan inferior, **When** el Propietario intenta bajar de plan, **Then** el
    sistema le advierte qué debe ajustar (usuarios o módulos) antes de completar el
    cambio.
 3. **Given** un cambio de plan completado, **When** se consulta el historial de la
@@ -159,8 +159,8 @@ que recupera el acceso normal con sus datos intactos.
 
 ### Edge Cases
 
-- ¿Qué pasa si el único Owner de una Organization quiere abandonarla? El sistema MUST
-  exigir transferir el rol Owner a otro Membership existente antes de permitirlo, en
+- ¿Qué pasa si el único Propietario de una Organization quiere abandonarla? El sistema MUST
+  exigir transferir el rol Propietario a otro Membership existente antes de permitirlo, en
   línea con la regla ya definida en spec 001 (una Organization nunca queda sin
   administrador).
 - ¿Qué ocurre si dos Organizations intentan registrar el mismo dominio personalizado? El
@@ -181,7 +181,7 @@ que recupera el acceso normal con sus datos intactos.
 
 - **FR-001**: El sistema MUST permitir crear una nueva Organization con al menos nombre,
   zona horaria, moneda e idioma.
-- **FR-002**: El sistema MUST asignar automáticamente el rol Owner al User que crea una
+- **FR-002**: El sistema MUST asignar automáticamente el rol Propietario al User que crea una
   Organization.
 - **FR-003**: El sistema MUST permitir invitar Users a una Organization respetando los
   límites de usuarios de su plan vigente, delegando la mecánica de autenticación/
@@ -202,7 +202,7 @@ que recupera el acceso normal con sus datos intactos.
 - **FR-011**: El sistema MUST garantizar que ningún dato de una Organization sea
   accesible ni modificable desde otra Organization, en cualquier operación del sistema.
 - **FR-012**: El sistema MUST impedir que una Organization quede sin ningún Membership
-  con rol Owner.
+  con rol Propietario.
 - **FR-013**: El sistema MUST registrar en el Audit Log la creación, actualización,
   suspensión, reactivación, cambio de plan e invitaciones de cada Organization,
   incluyendo quién y cuándo realizó la acción.
@@ -214,15 +214,15 @@ que recupera el acceso normal con sus datos intactos.
 - **Organization**: Empresa que usa VELO; contenedor aislado (tenant) de todos sus datos
   (ver [Domain Model](../../docs/domain-model.md)); posee nombre, logo, dominio, zona
   horaria, moneda, idioma, plan y configuración (Settings).
-- **Owner**: Rol especial de Membership asignado automáticamente al creador de una
-  Organization; una Organization siempre tiene al menos un Owner.
+- **Propietario**: Rol especial de Membership asignado automáticamente al creador de una
+  Organization; una Organization siempre tiene al menos un Propietario.
 - **Plan**: Nivel contratado por una Organization; determina límites (usuarios) y módulos
   habilitables.
 - **Settings**: Configuración propia de una Organization (branding, moneda, impuestos,
   módulos habilitados).
 - **Membership**: Relación User–Organization con un Role (ver
   [specs/004-authentication-identity/spec.md](../004-authentication-identity/spec.md));
-  esta feature es responsable de crear la primera Membership (Owner) al crear la
+  esta feature es responsable de crear la primera Membership (Propietario) al crear la
   Organization.
 - **Audit Log**: Registro inmutable de eventos del ciclo de vida de la Organization
   (creación, actualización, suspensión, reactivación, cambio de plan, invitaciones).
@@ -232,7 +232,7 @@ que recupera el acceso normal con sus datos intactos.
 ### Measurable Outcomes
 
 - **SC-001**: Una persona nueva puede crear su Organization y quedar operando dentro de
-  ella (como Owner) en menos de 2 minutos.
+  ella (como Propietario) en menos de 2 minutos.
 - **SC-002**: El sistema soporta al menos 100 Organizations activas simultáneamente sin
   que ninguna vea datos de otra, verificable mediante pruebas de aislamiento.
 - **SC-003**: El 100% de los cambios de configuración de una Organization (branding,
@@ -248,15 +248,15 @@ que recupera el acceso normal con sus datos intactos.
 
 ## Assumptions
 
-- Un User puede crear y ser Owner de más de una Organization; cada Organization mantiene
+- Un User puede crear y ser Propietario de más de una Organization; cada Organization mantiene
   su configuración y datos completamente separados.
 - El catálogo de planes (nombres, límites de usuarios, módulos incluidos) se define como
   configuración de negocio y no forma parte del alcance de esta especificación; esta
   feature solo define el comportamiento de cambiar entre planes existentes.
 - La suspensión de una Organization es una acción administrativa de la plataforma (no
-  disponible para el Owner sobre su propia Organization), reservada a casos de
-  incumplimiento de pago o soporte; el Owner sí puede solicitar la baja, pero la
-  ejecución de la suspensión queda fuera del alcance de esta fase para el propio Owner.
+  disponible para el Propietario sobre su propia Organization), reservada a casos de
+  incumplimiento de pago o soporte; el Propietario sí puede solicitar la baja, pero la
+  ejecución de la suspensión queda fuera del alcance de esta fase para el propio Propietario.
 - Los módulos habilitables en esta fase corresponden a las fases del roadmap ya
   definidas en [docs/product-vision.md](../../docs/product-vision.md) (CRM, Agenda,
   Facturación, Inventario, RRHH, Automatizaciones); esta especificación solo define el

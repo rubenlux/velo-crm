@@ -43,3 +43,7 @@
   invariante de comportamiento observable, sin mencionar columnas de base de datos ni
   mecanismos de filtrado concretos, para mantener la spec libre de detalles de
   implementación.
+- 2026-07-01: se renombró el rol "Owner" (inglés) a "Propietario" (español) en toda la
+  spec, por decisión explícita del usuario de mantener los nombres de Role en español en
+  toda la plataforma (ver [specs/007-roles-permissions/](../../007-roles-permissions/spec.md),
+  que formaliza el catálogo completo de Roles).

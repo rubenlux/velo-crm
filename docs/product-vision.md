@@ -197,6 +197,21 @@ Todo gira alrededor de la empresa, no de una funcionalidad aislada.
 - No es un conjunto de aplicaciones independientes.
 - No pretende reemplazar todas las herramientas desde el primer día.
 
+## Fuera de alcance del MVP
+
+El MVP (Fase 1, ver [specs/001-crm-fase1-clientes-pipeline/spec.md](../specs/001-crm-fase1-clientes-pipeline/spec.md))
+es exclusivamente CRM. Quedan explícitamente fuera del MVP:
+
+- Contabilidad (Accounting)
+- Nómina (Payroll)
+- Manufactura (Manufacturing)
+- Marketplace
+- API Pública
+- AI Agents
+
+Ver [docs/clarifications-mvp.md](clarifications-mvp.md) para el detalle completo de
+preguntas y respuestas que fijan este alcance.
+
 ## Criterios de éxito
 
 El producto será exitoso cuando una PyME pueda gestionar la mayor parte de su operación
