@@ -274,6 +274,29 @@ pueden operar en ella, y reactivarla para confirmar que recupera el acceso.
 > invitar → aceptar → cambiar plan → suspender → reactivar → Audit Log) de punta a
 > punta contra la base de datos real de test.
 
+> **Post-revisión (hardening adicional, no listado como tarea original)**: una revisión
+> externa del diseño de esta spec señaló dos riesgos reales:
+> 1. `TenantContextGuard`/`AuthGuard` eran opt-in por método (`@UseGuards(...)` en cada
+>    endpoint) — un endpoint nuevo podía quedar sin protección por simple olvido.
+> 2. `OrganizationInvitationRepository.findById/cancel/reissue` traían por `id` puro y
+>    dependían de que el use case comparara `organizationId` después de la consulta —
+>    la base de datos misma no filtraba por tenant.
+>
+> Ambos se corrigieron:
+> - `AuthGuard` ahora es global (`APP_GUARD` en `AppModule`, deny-by-default); las
+>   rutas públicas se marcan explícitamente con `@Public()` (`identity/api/public.decorator.ts`).
+> - `TenantContextGuard` se aplica a nivel de clase en `OrganizationsController`
+>   (`@UseGuards(TenantContextGuard)` sobre la clase, no por método), con
+>   `@SkipTenantContext()` (`organizations/api/skip-tenant-context.decorator.ts`) para
+>   las 3 excepciones reales (`POST /organizations`, `suspend`, `reactivate`). Cualquier
+>   endpoint nuevo agregado a ese controller queda tenant-scoped por defecto.
+> - `OrganizationInvitationRepository` ahora filtra `organizationId` en el propio
+>   `WHERE`/`updateMany` de Prisma, no solo en una comparación posterior del use case.
+>
+> No era una vulnerabilidad explotable hoy (el use case ya comparaba `organizationId`
+> antes de actuar) — es defensa en profundidad contra un futuro descuido. Cubierto por
+> `backend/tests/integration/global-guards.spec.ts` (4 tests nuevos, total 67 tests).
+
 ---
 
 ## Dependencies & Execution Order

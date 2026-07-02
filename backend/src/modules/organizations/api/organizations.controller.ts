@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AuthGuard, AuthenticatedRequest } from '../../identity/api/auth.guard';
+import { AuthenticatedRequest } from '../../identity/api/auth.guard';
 import { TenantContextGuard, TenantScopedRequest } from './tenant-context.guard';
+import { SkipTenantContext } from './skip-tenant-context.decorator';
 import { PlatformAdminGuard } from './platform-admin.guard';
 import { CreateOrganizationUseCase } from '../application/create-organization.use-case';
 import { UpdateOrganizationUseCase } from '../application/update-organization.use-case';
@@ -26,6 +27,13 @@ import { UpdateModulesDto } from './dto/update-modules.dto';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { ChangePlanDto } from './dto/change-plan.dto';
 
+/**
+ * TenantContextGuard is applied class-wide: deny-by-default within this controller,
+ * so any new method added here is tenant-scoped unless explicitly marked
+ * @SkipTenantContext(). AuthGuard is global (see AppModule) and doesn't need to be
+ * repeated per method.
+ */
+@UseGuards(TenantContextGuard)
 @Controller('organizations')
 export class OrganizationsController {
   constructor(
@@ -45,19 +53,17 @@ export class OrganizationsController {
     private readonly reactivateOrganizationUseCase: ReactivateOrganizationUseCase,
   ) {}
 
-  @UseGuards(AuthGuard)
+  @SkipTenantContext()
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateOrganizationDto) {
     return this.createOrganizationUseCase.execute({ actorUserId: req.user.id, ...dto });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Get(':id')
   get(@Param('id') id: string) {
     return this.getOrganizationUseCase.execute(id);
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Patch(':id')
   update(@Req() req: TenantScopedRequest, @Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
     return this.updateOrganizationUseCase.execute({
@@ -68,7 +74,6 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Get(':id/audit-log')
   listAuditLog(@Param('id') id: string, @Query() query: ListAuditLogQueryDto) {
     return this.listAuditLogUseCase.execute(id, {
@@ -78,7 +83,6 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Patch(':id/branding')
   updateBranding(@Req() req: TenantScopedRequest, @Param('id') id: string, @Body() dto: UpdateBrandingDto) {
     return this.updateBrandingUseCase.execute({
@@ -89,7 +93,6 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Patch(':id/tax-settings')
   updateTaxSettings(@Req() req: TenantScopedRequest, @Param('id') id: string, @Body() dto: UpdateTaxSettingsDto) {
     return this.updateTaxSettingsUseCase.execute({
@@ -100,7 +103,6 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Patch(':id/modules')
   updateModules(@Req() req: TenantScopedRequest, @Param('id') id: string, @Body() dto: UpdateModulesDto) {
     return this.updateModulesUseCase.execute({
@@ -111,13 +113,11 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Get(':id/members')
   listMembers(@Param('id') id: string) {
     return this.listMembersUseCase.execute(id);
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Post(':id/invitations')
   async inviteMember(@Req() req: TenantScopedRequest, @Param('id') id: string, @Body() dto: InviteMemberDto) {
     const issued = await this.inviteMemberUseCase.execute({
@@ -138,13 +138,11 @@ export class OrganizationsController {
     };
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Get(':id/invitations')
   listInvitations(@Param('id') id: string) {
     return this.listInvitationsUseCase.execute(id);
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id/invitations/:invitationId')
   cancelInvitation(
@@ -160,7 +158,6 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, TenantContextGuard)
   @Patch(':id/plan')
   changePlan(@Req() req: TenantScopedRequest, @Param('id') id: string, @Body() dto: ChangePlanDto) {
     return this.changePlanUseCase.execute({
@@ -171,14 +168,16 @@ export class OrganizationsController {
     });
   }
 
-  @UseGuards(AuthGuard, PlatformAdminGuard)
+  @SkipTenantContext()
+  @UseGuards(PlatformAdminGuard)
   @HttpCode(HttpStatus.OK)
   @Post(':id/suspend')
   suspend(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.suspendOrganizationUseCase.execute({ organizationId: id, actorUserId: req.user.id });
   }
 
-  @UseGuards(AuthGuard, PlatformAdminGuard)
+  @SkipTenantContext()
+  @UseGuards(PlatformAdminGuard)
   @HttpCode(HttpStatus.OK)
   @Post(':id/reactivate')
   reactivate(@Req() req: AuthenticatedRequest, @Param('id') id: string) {

@@ -49,7 +49,7 @@ export class InviteMemberUseCase {
     }
 
     const issued = existing
-      ? await this.invitations.reissue(existing.id, input.role)
+      ? await this.invitations.reissue(input.organizationId, existing.id, input.role)
       : await this.invitations.create({
           organizationId: input.organizationId,
           email: input.email,

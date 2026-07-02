@@ -23,12 +23,12 @@ export class CancelInvitationUseCase {
       throw new ForbiddenRoleActionError();
     }
 
-    const invitation = await this.invitations.findById(input.invitationId);
-    if (!invitation || invitation.organizationId !== input.organizationId || invitation.status !== 'pending') {
+    const invitation = await this.invitations.findById(input.organizationId, input.invitationId);
+    if (!invitation || invitation.status !== 'pending') {
       throw new InvalidOrExpiredInvitationError();
     }
 
-    await this.invitations.cancel(input.invitationId);
+    await this.invitations.cancel(input.organizationId, input.invitationId);
 
     await this.auditLog.publish({
       organizationId: input.organizationId,

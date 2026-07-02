@@ -27,8 +27,9 @@ import { DisableMfaUseCase } from '../application/mfa-disable.use-case';
 import { OAuthLoginUseCase, OAuthProfile } from '../application/oauth-login.use-case';
 import { RefreshTokenService } from '../infrastructure/refresh-token.service';
 import { AccessTokenService } from '../infrastructure/jwt.service';
-import { AuthGuard, AuthenticatedRequest } from './auth.guard';
+import { AuthenticatedRequest } from './auth.guard';
 import { AuthThrottlerGuard } from './auth-throttler.guard';
+import { Public } from './public.decorator';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto, ResendVerificationDto, VerifyEmailDto } from './dto/token.dto';
@@ -62,6 +63,7 @@ export class AuthController {
     private readonly accessTokens: AccessTokenService,
   ) {}
 
+  @Public()
   @UseGuards(AuthThrottlerGuard)
   @Post('register')
   async register(@Body() dto: RegisterDto) {
@@ -75,6 +77,7 @@ export class AuthController {
     };
   }
 
+  @Public()
   @UseGuards(AuthThrottlerGuard)
   @HttpCode(HttpStatus.OK)
   @Post('login')
@@ -101,13 +104,13 @@ export class AuthController {
     };
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('logout')
   async logout(@Req() req: AuthenticatedRequest, @Body() dto: RefreshTokenDto) {
     await this.logoutUseCase.execute(req.user.id, dto.refreshToken);
   }
 
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto) {
@@ -116,6 +119,7 @@ export class AuthController {
     return { accessToken, refreshToken: plainRefreshToken };
   }
 
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Post('verify-email')
   async verifyEmail(@Body() dto: VerifyEmailDto) {
@@ -123,6 +127,7 @@ export class AuthController {
     return { verified: true };
   }
 
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Post('verify-email/resend')
   async resendVerification(@Body() dto: ResendVerificationDto) {
@@ -130,6 +135,7 @@ export class AuthController {
     return { emailVerificationToken };
   }
 
+  @Public()
   @UseGuards(AuthThrottlerGuard)
   @HttpCode(HttpStatus.OK)
   @Post('password/reset-request')
@@ -139,6 +145,7 @@ export class AuthController {
     return passwordResetToken ? { passwordResetToken } : { requested: true };
   }
 
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Post('password/reset-confirm')
   async confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
@@ -146,7 +153,6 @@ export class AuthController {
     return { reset: true };
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('password/change')
   async changePassword(@Req() req: AuthenticatedRequest, @Body() dto: ChangePasswordDto) {
@@ -154,34 +160,29 @@ export class AuthController {
     return { changed: true };
   }
 
-  @UseGuards(AuthGuard)
   @Get('sessions')
   async listSessions(@Req() req: AuthenticatedRequest) {
     return this.listSessionsUseCase.execute(req.user.id);
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('sessions/:sessionId')
   async revokeSession(@Req() req: AuthenticatedRequest, @Param('sessionId') sessionId: string) {
     await this.revokeSessionUseCase.execute(req.user.id, sessionId);
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('sessions')
   async revokeAllSessions(@Req() req: AuthenticatedRequest) {
     await this.revokeAllSessionsUseCase.execute(req.user.id);
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('mfa/enroll')
   async enrollMfa(@Req() req: AuthenticatedRequest) {
     return this.enrollMfaUseCase.execute(req.user.id);
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('mfa/enable')
   async enableMfa(@Req() req: AuthenticatedRequest, @Body() dto: EnableMfaDto) {
@@ -189,6 +190,7 @@ export class AuthController {
     return { enabled: true };
   }
 
+  @Public()
   @UseGuards(AuthThrottlerGuard)
   @HttpCode(HttpStatus.OK)
   @Post('mfa/verify')
@@ -205,7 +207,6 @@ export class AuthController {
     };
   }
 
-  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('mfa/disable')
   async disableMfa(@Req() req: AuthenticatedRequest, @Body() dto: DisableMfaDto) {
@@ -213,12 +214,14 @@ export class AuthController {
     return { disabled: true };
   }
 
+  @Public()
   @UseGuards(PassportAuthGuard('google'))
   @Get('oauth/google')
   googleAuth() {
     // Passport's GoogleStrategy handles the redirect to Google's consent screen.
   }
 
+  @Public()
   @UseGuards(PassportAuthGuard('google'))
   @HttpCode(HttpStatus.OK)
   @Get('oauth/google/callback')
@@ -226,12 +229,14 @@ export class AuthController {
     return this.completeOAuthLogin(req);
   }
 
+  @Public()
   @UseGuards(PassportAuthGuard('microsoft'))
   @Get('oauth/microsoft')
   microsoftAuth() {
     // Passport's MicrosoftStrategy handles the redirect to Microsoft's consent screen.
   }
 
+  @Public()
   @UseGuards(PassportAuthGuard('microsoft'))
   @HttpCode(HttpStatus.OK)
   @Get('oauth/microsoft/callback')

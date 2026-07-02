@@ -32,7 +32,6 @@ import { MfaVerifyUseCase } from './application/mfa-verify.use-case';
 import { DisableMfaUseCase } from './application/mfa-disable.use-case';
 import { OAuthLoginUseCase } from './application/oauth-login.use-case';
 import { AuthController } from './api/auth.controller';
-import { AuthGuard } from './api/auth.guard';
 
 @Module({
   imports: [
@@ -80,8 +79,7 @@ import { AuthGuard } from './api/auth.guard';
     MfaVerifyUseCase,
     DisableMfaUseCase,
     OAuthLoginUseCase,
-    AuthGuard,
   ],
-  exports: [AuthGuard, AccessTokenService, PrismaService],
+  exports: [AccessTokenService, PrismaService],
 })
 export class IdentityModule {}
