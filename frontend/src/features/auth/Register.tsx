@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApiError, register } from '../../services/auth-api';
+import { OAuthButtons } from './OAuthButtons';
 
 export function Register() {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ export function Register() {
       <p>
         ¿Ya tenés cuenta? <Link to="/login">Iniciar sesión</Link>
       </p>
+      <OAuthButtons />
     </main>
   );
 }

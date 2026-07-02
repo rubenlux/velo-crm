@@ -33,6 +33,7 @@ model User {
   passwordHash     String?
   mfaEnabled       Boolean   @default(false)
   mfaSecret        String?
+  mfaRecoveryCodes String[]  @default([])
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

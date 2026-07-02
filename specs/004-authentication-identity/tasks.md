@@ -130,19 +130,30 @@ sesión con ella; cambiar contraseña estando autenticado exigiendo la actual.
 
 ### Tests for User Story 2
 
-- [ ] T031 [P] [US2] Contract test `POST /auth/password/reset-request` en `backend/tests/contract/auth-password-reset-request.spec.ts`
-- [ ] T032 [P] [US2] Contract test `POST /auth/password/reset-confirm` en `backend/tests/contract/auth-password-reset-confirm.spec.ts`
-- [ ] T033 [P] [US2] Integration test: el enlace de reset es de un solo uso y expira en `backend/tests/integration/auth-password-reset.spec.ts`
+- [x] T031 [P] [US2] Contract test `POST /auth/password/reset-request` en `backend/tests/contract/auth-password-reset-request.spec.ts`
+- [x] T032 [P] [US2] Contract test `POST /auth/password/reset-confirm` en `backend/tests/contract/auth-password-reset-confirm.spec.ts`
+- [x] T033 [P] [US2] Integration test: el enlace de reset es de un solo uso y expira en `backend/tests/integration/auth-password-reset.spec.ts`
+
+> **Nota de alcance (T031-T033)**: los 3 casos (reset-request, reset-confirm, single-use
+> expiry) más el cambio de contraseña autenticado se consolidaron en un único archivo
+> `backend/tests/integration/auth-password-reset.spec.ts` (6 tests) en vez de 3 archivos
+> separados, para evitar duplicar el setup de `createTestApp()`.
 
 ### Implementation for User Story 2
 
-- [ ] T034 [P] [US2] Crear `PasswordResetTokenRepository` en `backend/src/modules/identity/infrastructure/password-reset-token.repository.ts`
-- [ ] T035 [US2] Implementar `RequestPasswordResetUseCase` en `backend/src/modules/identity/application/request-password-reset.use-case.ts` (depende de T034)
-- [ ] T036 [US2] Implementar `ConfirmPasswordResetUseCase` (invalida tokens previos + revoca sesiones) en `backend/src/modules/identity/application/confirm-password-reset.use-case.ts` (depende de T034, T011)
-- [ ] T037 [US2] Implementar `ChangePasswordUseCase` (exige contraseña actual) en `backend/src/modules/identity/application/change-password.use-case.ts` (depende de T019, T009)
-- [ ] T038 [US2] Agregar endpoints de reset/cambio de contraseña a `AuthController` (depende de T025, T035-T037)
-- [ ] T039 [P] [US2] Construir páginas "Olvidé mi contraseña" y "Restablecer contraseña" en `frontend/src/features/auth/ForgotPassword.tsx` y `ResetPassword.tsx`
-- [ ] T040 [US2] Construir formulario "Cambiar contraseña" en `frontend/src/features/auth/ChangePassword.tsx`
+- [x] T034 [P] [US2] Crear `PasswordResetTokenRepository` en `backend/src/modules/identity/infrastructure/password-reset-token.repository.ts`
+- [x] T035 [US2] Implementar `RequestPasswordResetUseCase` en `backend/src/modules/identity/application/request-password-reset.use-case.ts` (depende de T034)
+- [x] T036 [US2] Implementar `ConfirmPasswordResetUseCase` (invalida tokens previos + revoca sesiones) en `backend/src/modules/identity/application/confirm-password-reset.use-case.ts` (depende de T034, T011)
+- [x] T037 [US2] Implementar `ChangePasswordUseCase` (exige contraseña actual) en `backend/src/modules/identity/application/change-password.use-case.ts` (depende de T019, T009)
+- [x] T038 [US2] Agregar endpoints de reset/cambio de contraseña a `AuthController` (depende de T025, T035-T037)
+- [x] T039 [P] [US2] Construir páginas "Olvidé mi contraseña" y "Restablecer contraseña" en `frontend/src/features/auth/ForgotPassword.tsx` y `ResetPassword.tsx`
+- [x] T040 [US2] Construir formulario "Cambiar contraseña" en `frontend/src/features/auth/ChangePassword.tsx`
+
+> **Nota de alcance (T040)**: `ChangePassword.tsx` está implementado y no tiene tests de
+> componente propios todavía; no está montado en ninguna ruta porque no existe aún una
+> pantalla de "cuenta"/perfil autenticada persistente (eso depende de guardar la sesión
+> en el cliente, ver nota de US1). El endpoint que consume (`password/change`) sí está
+> cubierto por tests de integración.
 
 **Checkpoint**: User Stories 1 y 2 funcionan de forma independiente
 
@@ -158,17 +169,23 @@ existente (vincula en vez de duplicar).
 
 ### Tests for User Story 3
 
-- [ ] T041 [P] [US3] Integration test: login OAuth con email nuevo crea User + OAuthAccount en `backend/tests/integration/auth-oauth-google.spec.ts`
-- [ ] T042 [P] [US3] Integration test: login OAuth con email existente vincula la cuenta en `backend/tests/integration/auth-oauth-link.spec.ts`
+- [x] T041 [P] [US3] Integration test: login OAuth con email nuevo crea User + OAuthAccount en `backend/tests/integration/auth-oauth-google.spec.ts`
+- [x] T042 [P] [US3] Integration test: login OAuth con email existente vincula la cuenta en `backend/tests/integration/auth-oauth-link.spec.ts`
+
+> **Nota de alcance (T041-T042)**: sin credenciales reales de Google/Microsoft en este
+> entorno, ambos tests ejercitan `OAuthLoginUseCase` directamente con `OAuthProfile`
+> simulados (no el flow HTTP de redirect real de Passport). El armado de estrategia
+> (T044-T045) sí se verifica al bootear la app en los demás tests de integración/E2E,
+> con fallback `'not-configured'` cuando faltan las env vars reales.
 
 ### Implementation for User Story 3
 
-- [ ] T043 [P] [US3] Crear `OAuthAccountRepository` en `backend/src/modules/identity/infrastructure/oauth-account.repository.ts`
-- [ ] T044 [P] [US3] Configurar estrategia Passport de Google en `backend/src/modules/identity/infrastructure/strategies/google.strategy.ts` (research.md #3)
-- [ ] T045 [P] [US3] Configurar estrategia Passport de Microsoft en `backend/src/modules/identity/infrastructure/strategies/microsoft.strategy.ts`
-- [ ] T046 [US3] Implementar `OAuthLoginUseCase` (crear o vincular User) en `backend/src/modules/identity/application/oauth-login.use-case.ts` (depende de T043, T019)
-- [ ] T047 [US3] Agregar rutas OAuth (google/microsoft + callbacks) a `AuthController` (depende de T044-T046)
-- [ ] T048 [P] [US3] Agregar botones "Continuar con Google/Microsoft" en `frontend/src/features/auth/Login.tsx` y `Register.tsx`
+- [x] T043 [P] [US3] Crear `OAuthAccountRepository` en `backend/src/modules/identity/infrastructure/oauth-account.repository.ts`
+- [x] T044 [P] [US3] Configurar estrategia Passport de Google en `backend/src/modules/identity/infrastructure/strategies/google.strategy.ts` (research.md #3)
+- [x] T045 [P] [US3] Configurar estrategia Passport de Microsoft en `backend/src/modules/identity/infrastructure/strategies/microsoft.strategy.ts`
+- [x] T046 [US3] Implementar `OAuthLoginUseCase` (crear o vincular User) en `backend/src/modules/identity/application/oauth-login.use-case.ts` (depende de T043, T019)
+- [x] T047 [US3] Agregar rutas OAuth (google/microsoft + callbacks) a `AuthController` (depende de T044-T046)
+- [x] T048 [P] [US3] Agregar botones "Continuar con Google/Microsoft" en `frontend/src/features/auth/Login.tsx` y `Register.tsx`
 
 **Checkpoint**: User Stories 1-3 funcionan de forma independiente
 
@@ -183,16 +200,20 @@ la sesión del otro remotamente (SC-007).
 
 ### Tests for User Story 4
 
-- [ ] T049 [P] [US4] Contract test `GET /auth/sessions` en `backend/tests/contract/auth-sessions-list.spec.ts`
-- [ ] T050 [P] [US4] Integration test: revocar una sesión remota la invalida de inmediato (SC-007) en `backend/tests/integration/auth-session-revoke.spec.ts`
+- [x] T049 [P] [US4] Contract test `GET /auth/sessions` en `backend/tests/contract/auth-sessions-list.spec.ts`
+- [x] T050 [P] [US4] Integration test: revocar una sesión remota la invalida de inmediato (SC-007) en `backend/tests/integration/auth-session-revoke.spec.ts`
+
+> **Nota de alcance (T049)**: el contract test de `GET /auth/sessions` quedó dentro de
+> `backend/tests/integration/auth-session-revoke.spec.ts` junto con el resto de US4, en
+> vez de un archivo de contrato separado.
 
 ### Implementation for User Story 4
 
-- [ ] T051 [P] [US4] Crear `DeviceRepository` en `backend/src/modules/identity/infrastructure/device.repository.ts`
-- [ ] T052 [US4] Implementar `ListSessionsUseCase` en `backend/src/modules/identity/application/list-sessions.use-case.ts` (depende de T051)
-- [ ] T053 [US4] Implementar `RevokeSessionUseCase` y `RevokeAllSessionsUseCase` en `backend/src/modules/identity/application/revoke-session.use-case.ts` (depende de T011)
-- [ ] T054 [US4] Agregar endpoints de sesiones (GET/DELETE) a `AuthController` (depende de T052, T053)
-- [ ] T055 [P] [US4] Construir página "Sesiones activas" (listar + revocar) en `frontend/src/features/auth/Sessions.tsx`
+- [x] T051 [P] [US4] Crear `DeviceRepository` en `backend/src/modules/identity/infrastructure/device.repository.ts`
+- [x] T052 [US4] Implementar `ListSessionsUseCase` en `backend/src/modules/identity/application/list-sessions.use-case.ts` (depende de T051)
+- [x] T053 [US4] Implementar `RevokeSessionUseCase` y `RevokeAllSessionsUseCase` en `backend/src/modules/identity/application/revoke-session.use-case.ts` (depende de T011)
+- [x] T054 [US4] Agregar endpoints de sesiones (GET/DELETE) a `AuthController` (depende de T052, T053)
+- [x] T055 [P] [US4] Construir página "Sesiones activas" (listar + revocar) en `frontend/src/features/auth/Sessions.tsx`
 
 **Checkpoint**: User Stories 1-4 funcionan de forma independiente
 
@@ -207,17 +228,27 @@ el código TOTP.
 
 ### Tests for User Story 5
 
-- [ ] T056 [P] [US5] Integration test: activar MFA exige TOTP en el siguiente login en `backend/tests/integration/auth-mfa-enable.spec.ts`
-- [ ] T057 [P] [US5] Integration test: desactivar MFA exige reautenticación en `backend/tests/integration/auth-mfa-disable.spec.ts`
+- [x] T056 [P] [US5] Integration test: activar MFA exige TOTP en el siguiente login en `backend/tests/integration/auth-mfa-enable.spec.ts`
+- [x] T057 [P] [US5] Integration test: desactivar MFA exige reautenticación en `backend/tests/integration/auth-mfa-disable.spec.ts`
+
+> **Nota de alcance (T056-T057)**: ambos escenarios (enable exige TOTP en el próximo
+> login, disable exige reautenticación) quedaron consolidados en un único archivo
+> `backend/tests/integration/auth-mfa.spec.ts` (4 tests, incluye enroll y códigos de
+> recuperación) en vez de dos archivos separados.
 
 ### Implementation for User Story 5
 
-- [ ] T058 [P] [US5] Implementar generación de secreto TOTP + códigos de recuperación en `backend/src/modules/identity/infrastructure/totp.service.ts` (research.md #4)
-- [ ] T059 [US5] Implementar `EnrollMfaUseCase` y `EnableMfaUseCase` en `backend/src/modules/identity/application/mfa-enroll.use-case.ts` (depende de T058)
-- [ ] T060 [US5] Implementar `VerifyMfaUseCase` (segundo paso del login) en `backend/src/modules/identity/application/mfa-verify.use-case.ts` (depende de T058, T022)
-- [ ] T061 [US5] Implementar `DisableMfaUseCase` (exige reautenticación) en `backend/src/modules/identity/application/mfa-disable.use-case.ts`
-- [ ] T062 [US5] Agregar endpoints de MFA a `AuthController` (depende de T059-T061)
-- [ ] T063 [P] [US5] Construir páginas "Activar MFA" (QR + códigos de recuperación) y "Verificar MFA" en `frontend/src/features/auth/Mfa.tsx`
+- [x] T058 [P] [US5] Implementar generación de secreto TOTP + códigos de recuperación en `backend/src/modules/identity/infrastructure/totp.service.ts` (research.md #4)
+- [x] T059 [US5] Implementar `EnrollMfaUseCase` y `EnableMfaUseCase` en `backend/src/modules/identity/application/mfa-enroll.use-case.ts` (depende de T058)
+- [x] T060 [US5] Implementar `VerifyMfaUseCase` (segundo paso del login) en `backend/src/modules/identity/application/mfa-verify.use-case.ts` (depende de T058, T022)
+- [x] T061 [US5] Implementar `DisableMfaUseCase` (exige reautenticación) en `backend/src/modules/identity/application/mfa-disable.use-case.ts`
+- [x] T062 [US5] Agregar endpoints de MFA a `AuthController` (depende de T059-T061)
+- [x] T063 [P] [US5] Construir páginas "Activar MFA" (QR + códigos de recuperación) y "Verificar MFA" en `frontend/src/features/auth/Mfa.tsx`
+
+> **Nota de alcance (T058)**: además de `totp.service.ts` se agregó
+> `mfa-secret-cipher.ts` (cifrado AES-256-GCM del secreto TOTP en reposo), no listado
+> originalmente en la tarea pero necesario para no guardar el secreto en texto plano
+> (constitución, principio de seguridad de datos).
 
 **Checkpoint**: Las 5 historias de usuario funcionan de forma independiente
 
@@ -228,10 +259,26 @@ el código TOTP.
 **Purpose**: Mejoras transversales a todas las historias
 
 - [ ] T064 [P] Agregar endpoint de aceptación de invitaciones (FR-018) `POST /auth/invitations/:token/accept` en `backend/src/modules/identity/api/auth.controller.ts`
-- [ ] T065 [P] E2E test del flujo completo de quickstart.md en `tests/e2e/identity/quickstart.spec.ts`
-- [ ] T066 Revisión de hardening de seguridad: protección CSRF y auditoría de secretos/env (FR-013)
-- [ ] T067 [P] Actualizar estado de la Fase 1 (módulo Identity) en `docs/implementation-plan.md`
-- [ ] T068 Ejecutar la validación manual de `quickstart.md` de punta a punta
+- [x] T065 [P] E2E test del flujo completo de quickstart.md en `tests/e2e/identity/quickstart.spec.ts`
+- [x] T066 Revisión de hardening de seguridad: protección CSRF y auditoría de secretos/env (FR-013)
+- [x] T067 [P] Actualizar estado de la Fase 1 (módulo Identity) en `docs/implementation-plan.md`
+- [x] T068 Ejecutar la validación manual de `quickstart.md` de punta a punta
+
+> **T064 diferido (no implementado)**: el endpoint de aceptación de invitaciones
+> (FR-018) requiere las entidades `Organization`/`Membership` de la spec 005
+> (Organizations), que todavía no tiene código. Implementarlo ahora significaría un
+> endpoint que no puede persistir la membership resultante (código muerto o simulado),
+> lo cual viola la regla de "no código sin pruebas reales" de
+> `docs/IMPLEMENTATION.md`. Queda pendiente hasta que exista la spec 005.
+>
+> **T066**: se corrió `grep` sobre `backend/src/modules/identity` buscando
+> `console.log`, `TODO`, `FIXME` y secretos hardcodeados — sin resultados. CSRF no
+> aplica todavía porque no hay sesiones basadas en cookies (los tokens viajan por
+> `Authorization: Bearer` y el body JSON, no por cookies de navegador), lo cual se
+> documentó en `docs/implementation-plan.md`.
+>
+> **T068**: cubierto por el E2E `quickstart.spec.ts` (T065), que ejecuta la secuencia
+> completa de `quickstart.md` de punta a punta contra la base de datos real de test.
 
 ---
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService as NestJwtService } from '@nestjs/jwt';
 
@@ -7,8 +7,17 @@ export interface AccessTokenPayload {
   email: string;
 }
 
+export interface MfaChallengePayload {
+  sub: string; // User.id
+  deviceId: string;
+  rememberMe: boolean;
+  typ: 'mfa_challenge';
+}
+
 /**
- * Issues and verifies short-lived access tokens (RS256) per research.md #2.
+ * Issues and verifies short-lived access tokens (RS256) per research.md #2, plus
+ * short-lived MFA challenge tokens used between "password verified" and "TOTP
+ * verified" during a User Story 5 login (see MfaVerifyUseCase).
  */
 @Injectable()
 export class AccessTokenService {
@@ -38,5 +47,29 @@ export class AccessTokenService {
       algorithms: ['RS256'],
       publicKey: this.publicKey(),
     });
+  }
+
+  signMfaChallenge(payload: Omit<MfaChallengePayload, 'typ'>): string {
+    return this.jwt.sign(
+      { ...payload, typ: 'mfa_challenge' },
+      {
+        algorithm: 'RS256',
+        privateKey: this.privateKey(),
+        expiresIn: this.config.get<string>('MFA_CHALLENGE_TTL', '5m'),
+      },
+    );
+  }
+
+  verifyMfaChallenge(token: string): MfaChallengePayload {
+    const payload = this.jwt.verify<MfaChallengePayload>(token, {
+      algorithms: ['RS256'],
+      publicKey: this.publicKey(),
+    });
+
+    if (payload.typ !== 'mfa_challenge') {
+      throw new UnauthorizedException('invalid_mfa_challenge');
+    }
+
+    return payload;
   }
 }

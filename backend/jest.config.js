@@ -10,4 +10,7 @@ module.exports = {
   coverageDirectory: './coverage',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
+  // Integration/E2E suites share one real Postgres DB and call resetDatabase()
+  // between tests; parallel workers truncate tables out from under each other.
+  maxWorkers: 1,
 };

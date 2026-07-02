@@ -28,7 +28,7 @@ de este plan); el desglose ejecutable por historia de usuario vive en
 
 Modules:
 
-- Authentication
+- Authentication ✅ **implementado** (2026-07-02) — ver estado abajo
 - Organizations
 - Users
 - Roles
@@ -39,6 +39,26 @@ Modules:
 
 Mapea a [specs/004-authentication-identity/spec.md](../specs/004-authentication-identity/spec.md)
 y [specs/005-organizations-multi-tenant/spec.md](../specs/005-organizations-multi-tenant/spec.md).
+
+### Estado de implementación — Authentication (spec 004)
+
+Las 5 historias de usuario están implementadas y testeadas (`backend/src/modules/identity/`,
+`frontend/src/features/auth/`): registro/login/logout/verificación de email,
+recuperación y cambio de contraseña, login con Google/Microsoft, gestión de sesiones y
+dispositivos, y MFA por TOTP con códigos de recuperación. 35 tests (contract +
+integration + E2E) pasando contra una base Postgres real. Pendiente explícito: el
+endpoint de aceptación de invitaciones (FR-018) depende de que exista `Organization`/
+`Membership` (spec 005) y no se implementó todavía; el login social no se probó contra
+Google/Microsoft reales (requiere credenciales OAuth que este entorno no tiene) — la
+lógica de creación/vinculación de cuenta sí está testeada con perfiles simulados.
+
+CSRF no aplica a esta superficie: los access/refresh tokens viajan por header
+`Authorization: Bearer` y body JSON, nunca por cookies de navegador, así que no hay
+estado ambiental que un sitio de terceros pueda explotar. Reevaluar si en el futuro se
+migra a cookies de sesión. Los tests de integración/E2E (`backend/tests/`) comparten una
+única base Postgres real y llaman `resetDatabase()` entre casos, por eso
+`backend/jest.config.js` fija `maxWorkers: 1` — correrlos en paralelo trunca tablas que
+otro worker está usando a mitad de test.
 
 ---
 

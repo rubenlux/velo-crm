@@ -31,12 +31,16 @@ monolithic "CRM Fase 1" spec before it got decomposed).
 `docs/IMPLEMENTATION.md` (mandatory engineering rules — multi-tenancy, soft delete,
 audit log, no-TODO/no-console.log quality gates).
 
-**Code status**: Only spec 004 (Authentication & Identity) has real code so far —
-`backend/` (NestJS + Prisma) and `frontend/` (React + Vite), MVP scope only (Setup +
-Foundational + User Story 1: register/login/logout/verify-email). Everything else is
+**Code status**: Spec 004 (Authentication & Identity) is fully implemented — all 5 user
+stories (register/verify/login/logout, password reset/change, Google/Microsoft OAuth,
+session/device management, TOTP MFA) in `backend/` (NestJS + Prisma) and `frontend/`
+(React + Vite), 35 tests passing. Deferred: FR-018 invitation-acceptance endpoint (needs
+spec 005 Organization/Membership, not built yet). Everything else (specs 005-026) is
 spec-only, no implementation yet.
 
 **Local dev DB**: Backend tests run against an isolated Docker container
 (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) — separate
 from any other local Postgres instance. Start it with `docker start velo-test-db` if
-stopped. `backend/.env` and `backend/.env.test` point to it.
+stopped. `backend/.env` and `backend/.env.test` point to it. `backend/jest.config.js`
+sets `maxWorkers: 1` — tests share this one real DB and call `resetDatabase()` between
+cases, so parallel workers would race and truncate tables mid-test.

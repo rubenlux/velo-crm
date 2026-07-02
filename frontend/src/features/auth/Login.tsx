@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AuthApiError, login } from '../../services/auth-api';
+import { AuthApiError, login, verifyMfa } from '../../services/auth-api';
+import { OAuthButtons } from './OAuthButtons';
 
 interface LocationState {
   justRegistered?: boolean;
@@ -16,6 +17,8 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,6 +27,12 @@ export function Login() {
 
     try {
       const result = await login(email, password, rememberMe);
+
+      if ('mfaRequired' in result) {
+        setMfaChallengeToken(result.mfaChallengeToken);
+        return;
+      }
+
       // Access/refresh token storage is intentionally out of scope for this MVP
       // slice; a dedicated session-storage strategy lands with User Story 4.
       setEmailVerified(result.user.emailVerified);
@@ -32,6 +41,45 @@ export function Login() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleMfaSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!mfaChallengeToken) return;
+
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await verifyMfa(mfaChallengeToken, mfaCode);
+      setEmailVerified(result.user.emailVerified);
+      setMfaChallengeToken(null);
+    } catch (err) {
+      setError(err instanceof AuthApiError ? 'Código incorrecto.' : 'No se pudo verificar el código.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (mfaChallengeToken) {
+    return (
+      <main>
+        <h1>Verificación en dos pasos</h1>
+        <form onSubmit={handleMfaSubmit}>
+          <label htmlFor="mfa-code">Código de tu app autenticadora</label>
+          <input
+            id="mfa-code"
+            inputMode="numeric"
+            required
+            value={mfaCode}
+            onChange={(event) => setMfaCode(event.target.value)}
+          />
+          {error && <p role="alert">{error}</p>}
+          <button type="submit" disabled={submitting}>
+            {submitting ? 'Verificando…' : 'Verificar'}
+          </button>
+        </form>
+      </main>
+    );
   }
 
   return (
@@ -78,6 +126,10 @@ export function Login() {
       <p>
         ¿No tenés cuenta? <Link to="/register">Crear cuenta</Link>
       </p>
+      <p>
+        <Link to="/forgot-password">Olvidé mi contraseña</Link>
+      </p>
+      <OAuthButtons />
     </main>
   );
 }
