@@ -32,22 +32,41 @@ monolithic "CRM Fase 1" spec before it got decomposed).
 audit log, no-TODO/no-console.log quality gates).
 
 **Code status**: Specs 004 (Authentication & Identity), 005 (Organizations,
-Multi-Tenant) and 006 (Users) are fully implemented — 82 backend tests passing. Spec
-004: register/verify/login/logout, password reset/change, Google/Microsoft OAuth,
-session/device management, TOTP MFA. Spec 005: create/configure Organization with
-automatic Propietario Membership, branding/tax/modules by plan, invitations (closes
-spec 004's FR-018), plan changes, suspend/reactivate — tenant isolation enforced by
-`TenantContextGuard` (`X-Organization-Id` header + Membership check, global
-deny-by-default via `AppModule`'s `APP_GUARD`). Spec 006: profile/preferences,
-list/switch Organizations, admin lifecycle (deactivate/reactivate/soft-delete Users
-with a "never without an administrator" invariant), access history — extends the same
-`User` table owned by `identity` rather than duplicating it (see
-`specs/006-users/research.md`). Everything else (specs 007-026) is spec-only, no
-implementation yet.
+Multi-Tenant) and 006 (Users) are fully implemented — 82 backend tests passing (0
+frontend tests yet). Spec 004: register/verify/login/logout, password reset/change,
+Google/Microsoft OAuth, session/device management, TOTP MFA. Spec 005: create/
+configure Organization with automatic Propietario Membership, branding/tax/modules by
+plan, invitations (closes spec 004's FR-018), plan changes, suspend/reactivate.
+Spec 006: profile/preferences, list/switch Organizations, admin lifecycle
+(deactivate/reactivate/soft-delete Users with a "never without an administrator"
+invariant), access history — extends the same `User` table owned by `identity` rather
+than duplicating it (see `specs/006-users/research.md`). Everything else (specs
+007-026) is spec-only, no implementation yet. Next up: **spec 007 Roles & Permissions**
+(full RBAC).
 
-**Local dev DB**: Backend tests run against an isolated Docker container
-(`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) — separate
-from any other local Postgres instance. Start it with `docker start velo-test-db` if
-stopped. `backend/.env` and `backend/.env.test` point to it. `backend/jest.config.js`
-sets `maxWorkers: 1` — tests share this one real DB and call `resetDatabase()` between
-cases, so parallel workers would race and truncate tables mid-test.
+**Authorization architecture (deny-by-default, hardened after a security review)**:
+`AuthGuard` (identity) is registered globally as `APP_GUARD` in `AppModule` — every
+route requires a valid Bearer token unless explicitly marked `@Public()`.
+`TenantContextGuard` (organizations) is applied at the **controller class level** on
+`OrganizationsController` (`@UseGuards(TenantContextGuard)` above the class, not per
+method) — every method requires `X-Organization-Id` + an active Membership unless
+marked `@SkipTenantContext()`. Any new controller that operates on Organization-scoped
+data should follow the same class-level pattern, not per-method `@UseGuards()`.
+Repositories that take both an `organizationId` and an entity id filter by both in the
+Prisma query itself (not just a post-fetch check in the use case) — see
+`OrganizationInvitationRepository` for the pattern.
+
+**Local dev DB**: Backend tests and the dev server both run against an isolated Docker
+container (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) —
+separate from any other local Postgres instance. Start it with `docker start
+velo-test-db` if stopped. `backend/.env` and `backend/.env.test` point to it.
+`backend/jest.config.js` sets `maxWorkers: 1` — tests share this one real DB and call
+`resetDatabase()` between cases, so parallel workers would race and truncate tables
+mid-test.
+
+**Prisma + Windows gotcha**: `npx prisma migrate dev` / `npx prisma generate` fails
+with `EPERM: operation not permitted, rename ...query_engine-windows.dll.node...` if
+the `nest start --watch` dev server is still running — it holds a lock on the engine
+DLL. Kill the process on port 3000 first (`Get-NetTCPConnection -State Listen |
+Where-Object {$_.LocalPort -eq 3000}` then `Stop-Process -Id <pid> -Force`), then
+regenerate, then restart the dev server.
