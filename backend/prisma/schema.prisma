@@ -199,6 +199,14 @@ enum AuditLogAction {
   InvitationAccepted
   UserProfileUpdated
   UserStatusChanged
+  RoleCreated
+  RoleUpdated
+  RoleDeleted
+  RoleAssigned
+  RoleRevoked
+  PermissionGranted
+  PermissionRevoked
+  PermissionDenied
 }
 
 model Organization {
@@ -219,6 +227,7 @@ model Organization {
   memberships Membership[]
   invitations OrganizationInvitation[]
   auditLogs   AuditLog[]
+  roles       Role[]
 
   @@map("organizations")
 }
@@ -275,4 +284,63 @@ model AuditLog {
   @@index([actorUserId])
   @@index([occurredAt])
   @@map("audit_logs")
+}
+
+// Roles & Permissions module (spec 007-roles-permissions)
+// See specs/007-roles-permissions/data-model.md for the source of truth.
+// Additive over Membership.role (research.md #1) — Membership itself is not modified.
+// RoleAssignment.membershipId and MembershipPermission.membershipId reference
+// Membership (above) by id only, without a Prisma relation, following the same
+// decoupling precedent as Membership.userId → User.
+
+model Role {
+  id                 String   @id @default(uuid())
+  // null = default role, shared platform-wide (research.md #2); seeded idempotently
+  // by DefaultRolesSeeder, never created directly through the API.
+  organizationId     String?
+  name               String
+  isDefault          Boolean  @default(false)
+  inheritsFromRoleId String?
+  permissions        String[] @default([])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization     Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inheritsFromRole Role?            @relation("RoleInheritance", fields: [inheritsFromRoleId], references: [id])
+  inheritedByRoles Role[]           @relation("RoleInheritance")
+  assignments      RoleAssignment[]
+
+  // NOTE: uniqueness of default-role names (organizationId = null) is enforced by
+  // DefaultRolesSeeder being the only writer for that case, not by this DB constraint
+  // — Postgres treats two NULLs in a composite unique index as distinct, so this index
+  // only guarantees per-Organization uniqueness for custom roles (research.md #2).
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+model RoleAssignment {
+  id               String   @id @default(uuid())
+  membershipId     String
+  roleId           String
+  assignedByUserId String
+  createdAt        DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, roleId])
+  @@index([membershipId])
+  @@map("role_assignments")
+}
+
+model MembershipPermission {
+  id              String   @id @default(uuid())
+  membershipId    String
+  permission      String
+  grantedByUserId String
+  createdAt       DateTime @default(now())
+
+  @@unique([membershipId, permission])
+  @@index([membershipId])
+  @@map("membership_permissions")
 }

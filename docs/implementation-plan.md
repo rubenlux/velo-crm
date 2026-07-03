@@ -31,15 +31,16 @@ Modules:
 - Authentication ✅ **implementado** (2026-07-02) — ver estado abajo
 - Organizations ✅ **implementado** (2026-07-02) — ver estado abajo
 - Users ✅ **implementado** (2026-07-02) — ver estado abajo
-- Roles
-- Permissions
-- Audit Log
+- Roles ✅ **implementado** (2026-07-03) — ver estado abajo
+- Permissions ✅ **implementado** (2026-07-03) — ver estado abajo
+- Audit Log ✅ **implementado** (spec 005, extendido en spec 007)
 
 **Deliverable**: Secure multi-tenant platform.
 
 Mapea a [specs/004-authentication-identity/spec.md](../specs/004-authentication-identity/spec.md),
-[specs/005-organizations-multi-tenant/spec.md](../specs/005-organizations-multi-tenant/spec.md)
-y [specs/006-users/spec.md](../specs/006-users/spec.md).
+[specs/005-organizations-multi-tenant/spec.md](../specs/005-organizations-multi-tenant/spec.md),
+[specs/006-users/spec.md](../specs/006-users/spec.md) y
+[specs/007-roles-permissions/spec.md](../specs/007-roles-permissions/spec.md).
 
 ### Estado de implementación — Authentication (spec 004)
 
@@ -125,6 +126,52 @@ User. `TenantContextGuard` (spec 005) se extendió para rechazar también si
 `User.status` no es `Active`, cerrando el requisito de que un User suspendido/
 inactivo/eliminado no pueda acceder a datos de ninguna Organization aunque sus
 credenciales de login sigan siendo válidas (`FR-012`).
+
+### Estado de implementación — Roles & Permissions (spec 007)
+
+Las 4 historias de usuario están implementadas y testeadas
+(`backend/src/modules/roles/`, `frontend/src/features/roles/`): asignar/revocar Roles
+adicionales y Permissions directos a un User con efecto inmediato, consultar permisos
+efectivos propios o ajenos, crear/editar/eliminar Roles personalizados (con herencia
+opcional de un Role por defecto), y filtrar el catálogo de Permissions ofrecido según
+los módulos habilitados de la Organization. 16 tests nuevos (integration + E2E) pasando
+contra la misma base Postgres real, para un total de 98 tests en el backend.
+
+RBAC se construyó **encima** de `Membership.role` (spec 005), no reemplazándolo: el rol
+base sigue viviendo ahí sin cambios, y esta feature agrega dos tablas nuevas
+(`RoleAssignment`, `MembershipPermission`) para roles/permisos *adicionales* — ver
+`specs/007-roles-permissions/research.md` #1. Los 8 roles por defecto (todos salvo
+Propietario) son filas compartidas (`Role.organizationId = null`), sembradas de forma
+idempotente al bootear (`DefaultRolesSeeder`, upsert por nombre) para sobrevivir a
+`resetDatabase()` en tests sin un paso de seed manual — research.md #2.
+"Propietario" no tiene fila `Role`: es un bypass total en código
+(`EffectivePermissionsService`/`PermissionsGuard`), evitando tener que mantener
+sincronizada una fila con "todos los permisos existentes" cada vez que el catálogo
+crece — research.md #3.
+
+Prevención de escalamiento de privilegios (`FR-013`): `AssignRoleUseCase` y
+`GrantDirectPermissionUseCase` comparan el conjunto de permisos del Role/Permission a
+otorgar contra los permisos efectivos del propio actor, rechazando con
+`PrivilegeEscalationError` si excede lo que el actor mismo posee (salvo Propietario).
+Como demostración end-to-end real (no solo contra los endpoints nuevos de esta spec),
+se retro-adoptó el `OrganizationMembersController` de spec 006
+(deactivate/reactivate/delete) de su chequeo hardcodeado `actorRole in
+['Propietario','Administrador']` a `@RequirePermission('user.manage')` — el rol por
+defecto Administrador incluye ese permiso, así que los 82 tests preexistentes de specs
+004-006 siguen pasando sin modificarse. `PermissionsGuard` se aplica por método (no a
+nivel de clase) en `RolesController` porque `effective-permissions` tiene una regla
+condicional que un guard de clase no puede expresar: un User siempre puede consultar
+los suyos propios, pero consultar los de otro exige `role.manage`.
+
+El catálogo de Permissions (`backend/src/modules/roles/infrastructure/
+permission-catalog.ts`) es un dato estático en código, no una tabla — incluye permisos
+de recursos de CRM que todavía son solo spec (`lead.create`, `opportunity.update`,
+etc.) para que los roles por defecto (Ventas, Contabilidad, Inventario...) no queden
+vacíos hasta que esas specs (008+) se implementen; ningún endpoint de esta spec hace
+cumplir permisos sobre recursos que no existen todavía — research.md #5. Un Role
+personalizado solo puede heredar (`inheritsFromRoleId`) de un Role **por defecto**,
+nunca de otro personalizado, lo que además garantiza por construcción que no pueda
+formarse un ciclo de herencia.
 
 ---
 

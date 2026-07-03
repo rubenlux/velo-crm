@@ -18,6 +18,10 @@ import { Preferences } from './features/users/Preferences';
 import { OrganizationSwitcher } from './features/users/OrganizationSwitcher';
 import { ManageOrgUsers } from './features/users/ManageOrgUsers';
 import { AccessHistory } from './features/users/AccessHistory';
+import { AssignRoles } from './features/roles/AssignRoles';
+import { EffectivePermissions } from './features/roles/EffectivePermissions';
+import { RolesList } from './features/roles/RolesList';
+import { RoleEditor } from './features/roles/RoleEditor';
 import { getSession } from './services/session';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -127,6 +131,46 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           element={
             <RequireAuth>
               <AccessHistory />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/roles/assign"
+          element={
+            <RequireAuth>
+              <AssignRoles />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/roles/effective-permissions"
+          element={
+            <RequireAuth>
+              <EffectivePermissions />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/roles"
+          element={
+            <RequireAuth>
+              <RolesList />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/roles/new"
+          element={
+            <RequireAuth>
+              <RoleEditor />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/roles/:roleId/edit"
+          element={
+            <RequireAuth>
+              <RoleEditor />
             </RequireAuth>
           }
         />

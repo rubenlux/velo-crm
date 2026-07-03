@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { IdentityModule } from './modules/identity/identity.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
 import { AuthGuard } from './modules/identity/api/auth.guard';
 
 @Module({
@@ -13,6 +14,7 @@ import { AuthGuard } from './modules/identity/api/auth.guard';
     IdentityModule,
     OrganizationsModule,
     UsersModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [

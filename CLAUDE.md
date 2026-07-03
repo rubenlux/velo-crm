@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/006-users/plan.md (see also docs/implementation-plan.md
+specs/007-roles-permissions/plan.md (see also docs/implementation-plan.md
 for the overall project roadmap and tech stack).
 <!-- SPECKIT END -->
 
@@ -32,17 +32,21 @@ monolithic "CRM Fase 1" spec before it got decomposed).
 audit log, no-TODO/no-console.log quality gates).
 
 **Code status**: Specs 004 (Authentication & Identity), 005 (Organizations,
-Multi-Tenant) and 006 (Users) are fully implemented — 82 backend tests passing (0
-frontend tests yet). Spec 004: register/verify/login/logout, password reset/change,
-Google/Microsoft OAuth, session/device management, TOTP MFA. Spec 005: create/
-configure Organization with automatic Propietario Membership, branding/tax/modules by
-plan, invitations (closes spec 004's FR-018), plan changes, suspend/reactivate.
-Spec 006: profile/preferences, list/switch Organizations, admin lifecycle
-(deactivate/reactivate/soft-delete Users with a "never without an administrator"
-invariant), access history — extends the same `User` table owned by `identity` rather
-than duplicating it (see `specs/006-users/research.md`). Everything else (specs
-007-026) is spec-only, no implementation yet. Next up: **spec 007 Roles & Permissions**
-(full RBAC).
+Multi-Tenant), 006 (Users) and 007 (Roles & Permissions) are fully implemented — 99
+backend tests passing (0 frontend tests yet). Spec 004: register/verify/login/logout,
+password reset/change, Google/Microsoft OAuth, session/device management, TOTP MFA.
+Spec 005: create/configure Organization with automatic Propietario Membership,
+branding/tax/modules by plan, invitations (closes spec 004's FR-018), plan changes,
+suspend/reactivate. Spec 006: profile/preferences, list/switch Organizations, admin
+lifecycle (deactivate/reactivate/soft-delete Users with a "never without an
+administrator" invariant), access history — extends the same `User` table owned by
+`identity` rather than duplicating it (see `specs/006-users/research.md`). Spec 007:
+full RBAC — assign/revoke additional Roles and direct Permissions on a Membership
+(union with the base `Membership.role`, never replacing it), view effective
+permissions, create/edit/delete custom Roles (with optional inheritance from a
+default Role), and a Permission catalog filtered by an Organization's enabled modules
+— see `specs/007-roles-permissions/research.md`. Everything else (specs 008-026) is
+spec-only, no implementation yet. Next up: **spec 008 Customers** (first CRM module).
 
 **Authorization architecture (deny-by-default, hardened after a security review)**:
 `AuthGuard` (identity) is registered globally as `APP_GUARD` in `AppModule` — every
@@ -55,6 +59,23 @@ data should follow the same class-level pattern, not per-method `@UseGuards()`.
 Repositories that take both an `organizationId` and an entity id filter by both in the
 Prisma query itself (not just a post-fetch check in the use case) — see
 `OrganizationInvitationRepository` for the pattern.
+
+**RBAC layer (spec 007)**: `PermissionsGuard` + `@RequirePermission('resource.action')`
+(`backend/src/modules/roles/api/`) is a second, opt-in gate layered *on top of*
+`TenantContextGuard`, not a replacement — it must run after it, since it reads
+`request.organizationId`. Unlike `TenantContextGuard`, it's applied **per-method**, not
+class-wide, because some endpoints (effective-permissions) have a conditional rule a
+class-wide gate can't express (a User can always read their own; reading someone
+else's needs `role.manage`). `EffectivePermissionsService` computes a Membership's
+permissions as base role ∪ `RoleAssignment`s ∪ `MembershipPermission` direct grants;
+`Membership.role === 'Propietario'` is a total bypass in code, never a `Role` row. The
+8 non-Propietario default Roles are shared rows (`Role.organizationId = null`), seeded
+idempotently on boot by `DefaultRolesSeeder` — `resetDatabase()` in tests must only
+delete custom Roles (`organizationId IS NOT NULL`), never the defaults. When checking
+whether a `Role` belongs to "this Organization or is a default", the correct guard is
+`role.organizationId !== null && role.organizationId !== organizationId` — a plain
+`!==` check alone incorrectly 404s on every default Role (bug found and fixed during
+spec 007; see `specs/007-roles-permissions/tasks.md` T037-T038 note).
 
 **Local dev DB**: Backend tests and the dev server both run against an isolated Docker
 container (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) —

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { IdentityModule } from '../identity/identity.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { RolesModule } from '../roles/roles.module';
 import { GetMyProfileUseCase } from './application/get-my-profile.use-case';
 import { UpdateProfileUseCase } from './application/update-profile.use-case';
 import { UpdatePreferencesUseCase } from './application/update-preferences.use-case';
@@ -15,7 +16,7 @@ import { UsersController } from './api/users.controller';
 import { OrganizationMembersController } from './api/organization-members.controller';
 
 @Module({
-  imports: [IdentityModule, OrganizationsModule],
+  imports: [IdentityModule, OrganizationsModule, RolesModule],
   controllers: [UsersController, OrganizationMembersController],
   providers: [
     GetMyProfileUseCase,
