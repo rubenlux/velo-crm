@@ -13,6 +13,11 @@ import { CreateOrganization } from './features/organizations/CreateOrganization'
 import { OrganizationSettings } from './features/organizations/OrganizationSettings';
 import { Members } from './features/organizations/Members';
 import { PlanBilling } from './features/organizations/PlanBilling';
+import { Profile } from './features/users/Profile';
+import { Preferences } from './features/users/Preferences';
+import { OrganizationSwitcher } from './features/users/OrganizationSwitcher';
+import { ManageOrgUsers } from './features/users/ManageOrgUsers';
+import { AccessHistory } from './features/users/AccessHistory';
 import { getSession } from './services/session';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -82,6 +87,46 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           element={
             <RequireAuth>
               <PlanBilling />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/preferences"
+          element={
+            <RequireAuth>
+              <Preferences />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations"
+          element={
+            <RequireAuth>
+              <OrganizationSwitcher />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/organizations/:organizationId/manage-users"
+          element={
+            <RequireAuth>
+              <ManageOrgUsers />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/access-history"
+          element={
+            <RequireAuth>
+              <AccessHistory />
             </RequireAuth>
           }
         />

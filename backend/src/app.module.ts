@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { IdentityModule } from './modules/identity/identity.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { UsersModule } from './modules/users/users.module';
 import { AuthGuard } from './modules/identity/api/auth.guard';
 
 @Module({
@@ -11,6 +12,7 @@ import { AuthGuard } from './modules/identity/api/auth.guard';
     ConfigModule.forRoot({ isGlobal: true }),
     IdentityModule,
     OrganizationsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

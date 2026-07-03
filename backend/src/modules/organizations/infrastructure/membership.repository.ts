@@ -37,4 +37,21 @@ export class MembershipRepository {
       orderBy: { createdAt: 'asc' },
     });
   }
+
+  /**
+   * Memberships with an admin-level role (Propietario/Administrador), Membership-side
+   * active. Whether the underlying User.status is also Active is checked by the
+   * caller composing this with identity's UserRepository (spec 006-users,
+   * research.md #4) — kept out of this repository to avoid a cross-table query
+   * spanning two modules' tables in one place.
+   */
+  listAdminMemberships(organizationId: string): Promise<Membership[]> {
+    return this.prisma.membership.findMany({
+      where: { organizationId, status: 'active', role: { in: ['Propietario', 'Administrador'] } },
+    });
+  }
+
+  listByUserId(userId: string): Promise<Membership[]> {
+    return this.prisma.membership.findMany({ where: { userId, status: 'active' } });
+  }
 }

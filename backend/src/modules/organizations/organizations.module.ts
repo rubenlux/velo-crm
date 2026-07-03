@@ -52,6 +52,12 @@ import { InvitationAcceptController } from './api/invitation-accept.controller';
     SuspendOrganizationUseCase,
     ReactivateOrganizationUseCase,
   ],
-  exports: [OrganizationRepository, MembershipRepository, AuditLogRepository, AuditLogPublisher],
+  exports: [
+    OrganizationRepository,
+    MembershipRepository,
+    AuditLogRepository,
+    AuditLogPublisher,
+    TenantContextGuard,
+  ],
 })
 export class OrganizationsModule {}

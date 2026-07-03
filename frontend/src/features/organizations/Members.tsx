@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { AuthApiError } from '../../services/auth-api';
 import {
   Invitation,
@@ -100,6 +100,11 @@ export function Members() {
   return (
     <main>
       <h1>Miembros</h1>
+      {organizationId && (
+        <p>
+          <Link to={`/organizations/${organizationId}/manage-users`}>Administrar usuarios</Link>
+        </p>
+      )}
 
       <section>
         <h2>Miembros activos</h2>

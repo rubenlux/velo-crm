@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { IdentityExceptionsFilter } from './modules/identity/api/identity-exceptions.filter';
 import { OrganizationsExceptionsFilter } from './modules/organizations/api/organizations-exceptions.filter';
+import { UsersExceptionsFilter } from './modules/users/api/users-exceptions.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -12,6 +13,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(
     new IdentityExceptionsFilter(app.get(HttpAdapterHost)),
     new OrganizationsExceptionsFilter(app.get(HttpAdapterHost)),
+    new UsersExceptionsFilter(app.get(HttpAdapterHost)),
   );
   await app.listen(process.env.PORT ?? 3000);
 }

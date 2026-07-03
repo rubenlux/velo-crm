@@ -26,6 +26,16 @@ enum TokenStatus {
   expired
 }
 
+// UserStatus (spec 006-users): lifecycle of a User, independent of login credentials.
+// See specs/006-users/data-model.md.
+enum UserStatus {
+  Pending
+  Active
+  Inactive
+  Suspended
+  Deleted
+}
+
 model User {
   id               String    @id @default(uuid())
   email            String    @unique
@@ -36,6 +46,18 @@ model User {
   mfaRecoveryCodes String[]  @default([])
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  // Profile + lifecycle fields (spec 006-users); owned by the users module at the
+  // application layer even though the columns live on this identity-owned table
+  // (see specs/006-users/research.md #1).
+  firstName   String?
+  lastName    String?
+  avatarUrl   String?
+  language    String     @default("es")
+  timezone    String     @default("UTC")
+  preferences Json       @default("{}")
+  status      UserStatus @default(Active)
+  deletedAt   DateTime?
 
   oauthAccounts          OAuthAccount[]
   sessions               Session[]
@@ -175,6 +197,8 @@ enum AuditLogAction {
   MemberInvited
   InvitationCancelled
   InvitationAccepted
+  UserProfileUpdated
+  UserStatusChanged
 }
 
 model Organization {
@@ -236,15 +260,19 @@ model OrganizationInvitation {
 
 model AuditLog {
   id             String         @id @default(uuid())
-  organizationId String
+  // Nullable (spec 006-users): account-level events like a User editing their own
+  // profile aren't scoped to any Organization. Org-scoped events (spec 005 and
+  // spec 006's status changes) always set this. See specs/006-users/research.md #7.
+  organizationId String?
   actorUserId    String?
   action         AuditLogAction
   metadata       Json           @default("{}")
   occurredAt     DateTime       @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+  @@index([actorUserId])
   @@index([occurredAt])
   @@map("audit_logs")
 }

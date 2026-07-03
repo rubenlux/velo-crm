@@ -5,6 +5,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/prisma/prisma.service';
 import { IdentityExceptionsFilter } from '../src/modules/identity/api/identity-exceptions.filter';
 import { OrganizationsExceptionsFilter } from '../src/modules/organizations/api/organizations-exceptions.filter';
+import { UsersExceptionsFilter } from '../src/modules/users/api/users-exceptions.filter';
 
 export async function createTestApp(): Promise<{ app: INestApplication; prisma: PrismaService }> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -14,6 +15,7 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
   app.useGlobalFilters(
     new IdentityExceptionsFilter(app.get(HttpAdapterHost)),
     new OrganizationsExceptionsFilter(app.get(HttpAdapterHost)),
+    new UsersExceptionsFilter(app.get(HttpAdapterHost)),
   );
   await app.init();
 

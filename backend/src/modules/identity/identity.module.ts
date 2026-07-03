@@ -9,6 +9,7 @@ import { AccessTokenService } from './infrastructure/jwt.service';
 import { RefreshTokenService } from './infrastructure/refresh-token.service';
 import { DeviceResolverService } from './infrastructure/device-resolver.service';
 import { UserRepository } from './infrastructure/user.repository';
+import { SessionHistoryRepository } from './infrastructure/session-history.repository';
 import { EmailVerificationTokenRepository } from './infrastructure/email-verification-token.repository';
 import { PasswordResetTokenRepository } from './infrastructure/password-reset-token.repository';
 import { DeviceRepository } from './infrastructure/device.repository';
@@ -54,6 +55,7 @@ import { AuthController } from './api/auth.controller';
     RefreshTokenService,
     DeviceResolverService,
     UserRepository,
+    SessionHistoryRepository,
     EmailVerificationTokenRepository,
     PasswordResetTokenRepository,
     DeviceRepository,
@@ -80,6 +82,6 @@ import { AuthController } from './api/auth.controller';
     DisableMfaUseCase,
     OAuthLoginUseCase,
   ],
-  exports: [AccessTokenService, PrismaService],
+  exports: [AccessTokenService, PrismaService, UserRepository, SessionHistoryRepository],
 })
 export class IdentityModule {}

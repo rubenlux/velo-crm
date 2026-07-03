@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable, NotFound
 import { Reflector } from '@nestjs/core';
 import { MembershipRole } from '@prisma/client';
 import { AuthenticatedRequest } from '../../identity/api/auth.guard';
+import { UserRepository } from '../../identity/infrastructure/user.repository';
 import { MembershipRepository } from '../infrastructure/membership.repository';
 import { OrganizationRepository } from '../infrastructure/organization.repository';
 import { SKIP_TENANT_CONTEXT_KEY } from './skip-tenant-context.decorator';
@@ -24,6 +25,7 @@ export class TenantContextGuard implements CanActivate {
   constructor(
     private readonly organizations: OrganizationRepository,
     private readonly memberships: MembershipRepository,
+    private readonly users: UserRepository,
     private readonly reflector: Reflector,
   ) {}
 
@@ -63,6 +65,15 @@ export class TenantContextGuard implements CanActivate {
 
     if (organization.status === 'suspended') {
       throw new ForbiddenException('organization_suspended');
+    }
+
+    // spec 006-users FR-012: Suspended/Inactive/Deleted Users keep valid login
+    // credentials but lose access to every Organization's data. The access token can
+    // live up to 15 minutes, so this must be checked fresh on every request, not only
+    // at login (research.md #5).
+    const userStatus = await this.users.findStatusById(request.user.id);
+    if (userStatus !== 'Active') {
+      throw new ForbiddenException('user_not_active');
     }
 
     request.organizationId = organizationId;

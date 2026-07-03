@@ -11,7 +11,9 @@ export interface AuditLogFilter {
 }
 
 export interface CreateAuditLogInput {
-  organizationId: string;
+  // Nullable for account-level events not tied to any Organization (spec 006-users,
+  // e.g. a User editing their own profile). See specs/006-users/research.md #7.
+  organizationId?: string | null;
   actorUserId?: string | null;
   action: AuditLogAction;
   metadata?: Prisma.InputJsonValue;
@@ -23,7 +25,7 @@ export class AuditLogRepository {
 
   create(data: CreateAuditLogInput, db: Db = this.prisma): Promise<AuditLog> {
     return db.auditLog.create({
-      data: { ...data, metadata: data.metadata ?? {} },
+      data: { ...data, organizationId: data.organizationId ?? null, metadata: data.metadata ?? {} },
     });
   }
 
@@ -34,6 +36,13 @@ export class AuditLogRepository {
         action: filter.action,
         occurredAt: { gte: filter.from, lte: filter.to },
       },
+      orderBy: { occurredAt: 'desc' },
+    });
+  }
+
+  listByActor(actorUserId: string): Promise<AuditLog[]> {
+    return this.prisma.auditLog.findMany({
+      where: { actorUserId },
       orderBy: { occurredAt: 'desc' },
     });
   }

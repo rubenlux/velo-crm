@@ -30,15 +30,16 @@ Modules:
 
 - Authentication ✅ **implementado** (2026-07-02) — ver estado abajo
 - Organizations ✅ **implementado** (2026-07-02) — ver estado abajo
-- Users
+- Users ✅ **implementado** (2026-07-02) — ver estado abajo
 - Roles
 - Permissions
 - Audit Log
 
 **Deliverable**: Secure multi-tenant platform.
 
-Mapea a [specs/004-authentication-identity/spec.md](../specs/004-authentication-identity/spec.md)
-y [specs/005-organizations-multi-tenant/spec.md](../specs/005-organizations-multi-tenant/spec.md).
+Mapea a [specs/004-authentication-identity/spec.md](../specs/004-authentication-identity/spec.md),
+[specs/005-organizations-multi-tenant/spec.md](../specs/005-organizations-multi-tenant/spec.md)
+y [specs/006-users/spec.md](../specs/006-users/spec.md).
 
 ### Estado de implementación — Authentication (spec 004)
 
@@ -101,6 +102,29 @@ de usuarios y módulos) se modela como configuración estática en código
 base de datos. La suspensión/reactivación de Organizations (acción administrativa de
 plataforma) se protege con un allowlist de emails vía `PLATFORM_ADMIN_EMAILS`, no con un
 sistema de roles de plataforma completo (fuera de alcance de esta spec).
+
+### Estado de implementación — Users (spec 006)
+
+Las 4 historias de usuario están implementadas y testeadas
+(`backend/src/modules/users/`, `frontend/src/features/users/`): editar perfil y
+preferencias, listar/"cambiar" entre Organizations propias, administrar el ciclo de
+vida de Users de una Organization (desactivar/reactivar/eliminar con el invariante de
+"nunca sin administrador"), e historial de accesos de solo lectura. 19 tests nuevos
+(contract + integration + E2E) pasando contra la misma base Postgres real, para un
+total de 82 tests en el backend.
+
+`User` sigue siendo una única tabla (propiedad de `identity` a nivel de schema): las
+columnas de perfil/estado se agregaron ahí y el `UserRepository` de `identity` se
+extendió y se exportó para que `users` lo consuma, en vez de crear un segundo
+repositorio sobre la misma tabla — ver `specs/006-users/research.md` #1. `AuditLog`
+(spec 005) pasó a aceptar `organizationId` nulo para eventos de cuenta no atados a
+ninguna Organization (por ejemplo, que un User edite su propio nombre) — ver
+research.md #7. El invariante de "nunca sin administrador" (`FR-008`), preparado pero
+sin usar desde spec 005, se ejercita por primera vez acá al desactivar/eliminar un
+User. `TenantContextGuard` (spec 005) se extendió para rechazar también si
+`User.status` no es `Active`, cerrando el requisito de que un User suspendido/
+inactivo/eliminado no pueda acceder a datos de ninguna Organization aunque sus
+credenciales de login sigan siendo válidas (`FR-012`).
 
 ---
 

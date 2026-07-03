@@ -32,7 +32,19 @@ export function Home() {
             </li>
           )}
           <li>
+            <Link to="/organizations">Mis organizaciones</Link>
+          </li>
+          <li>
             <Link to="/organizations/new">Crear organización</Link>
+          </li>
+          <li>
+            <Link to="/profile">Mi perfil</Link>
+          </li>
+          <li>
+            <Link to="/preferences">Preferencias</Link>
+          </li>
+          <li>
+            <Link to="/access-history">Historial de accesos</Link>
           </li>
           <li>
             <Link to="/sessions">Sesiones activas</Link>
