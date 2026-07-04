@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/007-roles-permissions/plan.md (see also docs/implementation-plan.md
+specs/009-contacts/plan.md (see also docs/implementation-plan.md
 for the overall project roadmap and tech stack).
 <!-- SPECKIT END -->
 
@@ -32,21 +32,32 @@ monolithic "CRM Fase 1" spec before it got decomposed).
 audit log, no-TODO/no-console.log quality gates).
 
 **Code status**: Specs 004 (Authentication & Identity), 005 (Organizations,
-Multi-Tenant), 006 (Users) and 007 (Roles & Permissions) are fully implemented — 99
-backend tests passing (0 frontend tests yet). Spec 004: register/verify/login/logout,
-password reset/change, Google/Microsoft OAuth, session/device management, TOTP MFA.
-Spec 005: create/configure Organization with automatic Propietario Membership,
-branding/tax/modules by plan, invitations (closes spec 004's FR-018), plan changes,
-suspend/reactivate. Spec 006: profile/preferences, list/switch Organizations, admin
-lifecycle (deactivate/reactivate/soft-delete Users with a "never without an
-administrator" invariant), access history — extends the same `User` table owned by
-`identity` rather than duplicating it (see `specs/006-users/research.md`). Spec 007:
-full RBAC — assign/revoke additional Roles and direct Permissions on a Membership
-(union with the base `Membership.role`, never replacing it), view effective
-permissions, create/edit/delete custom Roles (with optional inheritance from a
-default Role), and a Permission catalog filtered by an Organization's enabled modules
-— see `specs/007-roles-permissions/research.md`. Everything else (specs 008-026) is
-spec-only, no implementation yet. Next up: **spec 008 Customers** (first CRM module).
+Multi-Tenant), 006 (Users), 007 (Roles & Permissions), 008 (Customers) and 009
+(Contacts) are fully implemented — 134 backend tests passing (0 frontend tests yet).
+Spec 004: register/verify/login/logout, password reset/change, Google/Microsoft
+OAuth, session/device management, TOTP MFA. Spec 005: create/configure Organization
+with automatic Propietario Membership, branding/tax/modules by plan, invitations
+(closes spec 004's FR-018), plan changes, suspend/reactivate. Spec 006:
+profile/preferences, list/switch Organizations, admin lifecycle
+(deactivate/reactivate/soft-delete Users with a "never without an administrator"
+invariant), access history — extends the same `User` table owned by `identity`
+rather than duplicating it (see `specs/006-users/research.md`). Spec 007: full RBAC —
+assign/revoke additional Roles and direct Permissions on a Membership (union with the
+base `Membership.role`, never replacing it), view effective permissions, create/edit/
+delete custom Roles (with optional inheritance from a default Role), and a Permission
+catalog filtered by an Organization's enabled modules — see
+`specs/007-roles-permissions/research.md`. Spec 008 (first CRM module): Customer
+CRUD with CUIT/NIF duplicate prevention per Organization, search/filters
+(`pg_trgm`/GIN indexes for <300ms at scale), archive/restore, a calculated timeline
+(not a persisted table), and merge duplicates + CSV export/import — see
+`specs/008-customers/research.md` and the "Customers module" note below. Spec 009
+(first module depending on another Fase 2 module, not just the platform core):
+Contact CRUD nested under a Customer (hard FK, `onDelete: Restrict`), a single
+primary Contact per Customer enforced by both a transaction and a Postgres partial
+unique index, search across primary/secondary emails and phones, a calculated
+timeline (same pattern as spec 008), and transfer/merge — see
+`specs/009-contacts/research.md` and the "Contacts module" note below. Everything
+else (specs 010-026) is spec-only, no implementation yet. Next up: **spec 010 Leads**.
 
 **Authorization architecture (deny-by-default, hardened after a security review)**:
 `AuthGuard` (identity) is registered globally as `APP_GUARD` in `AppModule` — every
@@ -76,6 +87,38 @@ whether a `Role` belongs to "this Organization or is a default", the correct gua
 `role.organizationId !== null && role.organizationId !== organizationId` — a plain
 `!==` check alone incorrectly 404s on every default Role (bug found and fixed during
 spec 007; see `specs/007-roles-permissions/tasks.md` T037-T038 note).
+
+**Customers module (spec 008)**: reuses the `customer.*` permission keys spec 007
+already declared for the `crm` module — no new permission keys were added.
+Field-level edit history lives in its own `CustomerHistory` table, separate from the
+platform `AuditLog` (spec 005); a Customer's timeline is a **calculated view**
+combining both at query time (`GetCustomerTimelineUseCase`), not a persisted
+`TimelineEntry` table — future CRM specs (Contacts, Activities, Opportunities,
+Documents) that add timeline events should extend that use case rather than
+introduce a shared timeline table. Merging duplicate Customers does not add a new
+`CustomerStatus` value; it sets `mergedIntoCustomerId` on the discarded row (a
+self-relation), and any direct read of that row fails with a dedicated error
+carrying the survivor's id. Edits use optimistic concurrency (`version` column,
+checked and incremented on every update) instead of locks. See
+`specs/008-customers/research.md` for the full rationale of each of these choices.
+
+**Contacts module (spec 009)**: `Contact.customerId` is a hard, non-nullable FK
+(`onDelete: Restrict`) — a Contact can never exist without exactly one Customer, and a
+Customer with Contacts attached can't be hard-deleted (moot in practice since
+Customers are never hard-deleted either, spec 008 RN-004). `ContactsModule` is the
+first Fase 2 module that imports another Fase 2 module (`CustomersModule`, for
+`CustomerRepository`) rather than only the platform core — follow that same
+`exports: [...]` pattern for any future cross-module dependency inside the CRM phase.
+"At most one primary Contact per Customer" is enforced twice: a transaction in
+`ContactRepository.setPrimary` (unset the previous, set the new, atomically) plus a
+Postgres partial unique index (`contacts_customer_primary_unique ON contacts
+(customer_id) WHERE is_primary = true`) added by hand in the migration SQL — Prisma's
+schema syntax cannot express a partial unique index, so it never appears in
+`schema.prisma` itself, only in the migration file. Transferring a Contact to another
+Customer always forces `isPrimary = false`, even if it was the origin Customer's
+primary. Reuses `contact.*` permission keys and the History-table-plus-calculated-
+timeline pattern from spec 008 without modification — see
+`specs/009-contacts/research.md` for the full rationale.
 
 **Local dev DB**: Backend tests and the dev server both run against an isolated Docker
 container (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) —

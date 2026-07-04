@@ -179,8 +179,8 @@ formarse un ciclo de herencia.
 
 Modules:
 
-- Customers
-- Contacts
+- Customers ✅ **implementado** (2026-07-03) — ver estado abajo
+- Contacts ✅ **implementado** (2026-07-03) — ver estado abajo
 - Leads
 - Opportunities
 - Activities
@@ -189,7 +189,75 @@ Modules:
 
 **Deliverable**: Complete CRM.
 
-Mapea a [specs/001-crm-fase1-clientes-pipeline/spec.md](../specs/001-crm-fase1-clientes-pipeline/spec.md).
+Mapea a [specs/001-crm-fase1-clientes-pipeline/spec.md](../specs/001-crm-fase1-clientes-pipeline/spec.md)
+(superseded) y, por entidad, a
+[specs/008-customers/spec.md](../specs/008-customers/spec.md) y
+[specs/009-contacts/spec.md](../specs/009-contacts/spec.md).
+
+### Estado de implementación — Customers (spec 008)
+
+Las 5 historias de usuario están implementadas y testeadas
+(`backend/src/modules/customers/`): alta/edición con prevención de duplicados por
+CUIT/NIF por Organization, búsqueda/filtros (índices `pg_trgm`/GIN para <300ms a
+escala), baja lógica (archivado)/restauración, línea de tiempo unificada, y fusión de
+duplicados + exportar/importar en CSV. 19 tests nuevos (integration + E2E) pasando
+contra la misma base Postgres real, para un total de 117 tests en el backend.
+
+Primer módulo real de la Fase 2, construido enteramente **sobre** el core de
+plataforma (specs 004-007) sin tocarlo: reutiliza `TenantContextGuard`/
+`AuditLogPublisher` (spec 005) y `PermissionsGuard`/`@RequirePermission('customer.*')`
+con los permission keys que spec 007 ya había declarado por adelantado — sin agregar
+claves nuevas al catálogo (`specs/008-customers/research.md` #2). El historial de
+cambios campo-por-campo vive en una tabla propia (`CustomerHistory`), separada del
+`AuditLog` de plataforma; la línea de tiempo de un Customer es una vista calculada que
+combina ambas fuentes en el momento de la consulta, no una tabla `TimelineEntry`
+persistida (research.md #4-#5) — patrón que specs futuras (Contacts, Activities,
+Opportunities, Documentos) deben replicar en vez de introducir una tabla de timeline
+compartida.
+
+Concurrencia optimista (columna `version`, incrementada en cada edición) protege
+contra ediciones simultáneas del mismo Customer sin locks pesimistas
+(research.md #8). La fusión de duplicados no introduce un nuevo valor de
+`CustomerStatus`: usa un campo `mergedIntoCustomerId` (auto-relación) y bloquea el
+acceso directo al registro descartado con un error dedicado que indica el
+sobreviviente (research.md #6) — mismo patrón a seguir por spec 009 (Contacts) para su
+propia fusión. `CustomerArchivedGuardService` (FR-011: bloquear nuevas Opportunities
+sobre un Customer archivado) es una declaración anticipada sin consumidor real
+todavía — spec 011 (Opportunities) la usará al implementarse, mismo patrón que spec
+007 declaró permisos de CRM por adelantado.
+
+### Estado de implementación — Contacts (spec 009)
+
+Las 5 historias de usuario están implementadas y testeadas
+(`backend/src/modules/contacts/`): alta/edición/archivado de Contacts bajo un Customer
+(FK obligatoria, sin excepción), designación de contacto principal por Customer,
+búsqueda por nombre/email/teléfono/cargo/empresa/ciudad/etiquetas (incluidos emails y
+teléfonos secundarios), línea de tiempo unificada, y transferencia entre Customers +
+fusión de duplicados del mismo Customer. 17 tests nuevos (integration + E2E) pasando
+contra la misma base Postgres real, para un total de 134 tests en el backend.
+
+Primer módulo de la Fase 2 que depende de **otro** módulo de la misma fase, no solo
+del core de plataforma: `Contact.customerId` es una FK `onDelete: Restrict` obligatoria
+hacia `Customer` (spec 008) — `ContactsModule` importa `CustomersModule` y consume su
+`CustomerRepository` exportado para validar el `customerId` al crear/transferir
+(`specs/009-contacts/research.md` #1). Replica varios patrones ya validados en spec
+008 sin modificarlos: reutiliza los permission keys `contact.*` de spec 007 sin
+agregar ninguno nuevo, historial propio (`ContactHistory`) + timeline calculada (no
+persistida) igual que `CustomerHistory`, y fusión vía `mergedIntoContactId` (auto-
+relación) sin introducir un nuevo valor de `ContactStatus` — con una restricción
+adicional que spec 008 no necesita: solo se puede fusionar Contacts del mismo
+Customer (`ContactCustomerMismatchError`).
+
+"A lo sumo un Contact principal por Customer en todo momento" (SC-004) se garantiza en
+dos capas: una transacción de aplicación (`ContactRepository.setPrimary`, desmarca el
+anterior y marca el nuevo atómicamente) más un índice único parcial de Postgres
+(`contacts_customer_primary_unique ON contacts (customer_id) WHERE is_primary = true`)
+como defensa en profundidad — Prisma no puede expresar un índice único parcial en
+`schema.prisma`, así que se agregó a mano en el `.sql` de la migración
+(`specs/009-contacts/research.md` #4). Transferir un Contact a otro Customer fuerza
+`isPrimary = false` incondicionalmente, incluso si era el principal del Customer de
+origen (research.md #5) — el Customer de origen queda sin principal hasta que se
+designe uno nuevo manualmente, tal como pide el edge case de spec.md.
 
 ---
 

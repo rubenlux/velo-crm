@@ -46,4 +46,16 @@ export class AuditLogRepository {
       orderBy: { occurredAt: 'desc' },
     });
   }
+
+  // Generic lookup by a top-level metadata field, e.g. `{ customerId }`/`{ contactId }`
+  // — used by domain-entity timelines (spec 008 Customer, spec 009 Contact) that need
+  // "every AuditLog entry about this specific record", not just "about this
+  // Organization". Kept here rather than per-module to avoid two modules
+  // re-implementing the same JSON-path query (research.md #5 of spec 008).
+  listByMetadataField(organizationId: string, field: string, value: string): Promise<AuditLog[]> {
+    return this.prisma.auditLog.findMany({
+      where: { organizationId, metadata: { path: [field], equals: value } },
+      orderBy: { occurredAt: 'asc' },
+    });
+  }
 }

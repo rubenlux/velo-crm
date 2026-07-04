@@ -207,6 +207,20 @@ enum AuditLogAction {
   PermissionGranted
   PermissionRevoked
   PermissionDenied
+  CustomerCreated
+  CustomerUpdated
+  CustomerArchived
+  CustomerRestored
+  CustomerMerged
+  CustomersExported
+  CustomersImported
+  ContactCreated
+  ContactUpdated
+  ContactCustomerChanged
+  ContactPrimaryChanged
+  ContactArchived
+  ContactRestored
+  ContactMerged
 }
 
 model Organization {
@@ -228,6 +242,8 @@ model Organization {
   invitations OrganizationInvitation[]
   auditLogs   AuditLog[]
   roles       Role[]
+  customers   Customer[]
+  contacts    Contact[]
 
   @@map("organizations")
 }
@@ -343,4 +359,166 @@ model MembershipPermission {
   @@unique([membershipId, permission])
   @@index([membershipId])
   @@map("membership_permissions")
+}
+
+// Customers module (spec 008-customers)
+// See specs/008-customers/data-model.md for the source of truth.
+// Customer.organizationId filters every query at the repository level (research.md
+// #1). No physical delete ever — "eliminar" is always status = archived (RN-004).
+
+enum CustomerType {
+  person
+  company
+}
+
+enum CustomerStatus {
+  active
+  inactive
+  suspended
+  archived
+}
+
+enum CustomerPriority {
+  low
+  medium
+  high
+}
+
+model Customer {
+  id             String           @id @default(uuid())
+  organizationId String
+  name           String
+  legalName      String?
+  tradeName      String?
+  type           CustomerType     @default(company)
+  taxId          String?
+  taxCondition   String?
+  email          String?
+  phone          String?
+  website        String?
+  country        String?
+  state          String?
+  city           String?
+  address        String?
+  ownerUserId    String?
+  source         String?
+  category       String?
+  tags           String[]         @default([])
+  priority       CustomerPriority @default(medium)
+  customFields   Json             @default("{}")
+  status         CustomerStatus   @default(active)
+  // Non-null = this row was discarded in a merge; research.md #6. Never a new
+  // CustomerStatus value — status keeps whatever it was before the merge.
+  mergedIntoCustomerId String?
+  version        Int              @default(1)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mergedInto      Customer?         @relation("CustomerMerge", fields: [mergedIntoCustomerId], references: [id])
+  mergedCustomers Customer[]        @relation("CustomerMerge")
+  history         CustomerHistory[]
+  contacts        Contact[]
+
+  // NULLs don't count as duplicates in Postgres unique constraints (research.md #3):
+  // multiple Customers without a taxId in the same Organization can coexist.
+  @@unique([organizationId, taxId])
+  @@index([organizationId, status])
+  @@map("customers")
+}
+
+model CustomerHistory {
+  id              String   @id @default(uuid())
+  customerId      String
+  changedByUserId String
+  // { field: { before, after } } for the fields touched by that single edit
+  // (research.md #4). Re-parented (customerId reassigned) to the survivor on a merge.
+  changes         Json
+  changedAt       DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_history")
+}
+
+// Contacts module (spec 009-contacts)
+// See specs/009-contacts/data-model.md for the source of truth.
+// Contact.customerId is a hard, non-nullable dependency on Customer (RN-001,
+// research.md #1) — a Contact can never exist without exactly one Customer.
+
+enum ContactStatus {
+  active
+  inactive
+  archived
+}
+
+model Contact {
+  id             String        @id @default(uuid())
+  organizationId String
+  customerId     String
+  firstName      String
+  lastName       String
+  photoUrl       String?
+  birthDate      DateTime?
+  gender         String?
+  jobTitle       String?
+  department     String?
+  area           String?
+  decisionLevel  String?
+  // Denormalized from Customer.name at creation time to avoid a JOIN on every
+  // search-by-company (research.md #8) — not kept in strict sync if the Customer is
+  // later renamed.
+  company          String?
+  primaryEmail     String?
+  secondaryEmails  String[]         @default([])
+  primaryPhone     String?
+  secondaryPhones  String[]         @default([])
+  whatsapp         String?
+  linkedin         String?
+  website          String?
+  country          String?
+  state            String?
+  city             String?
+  address          String?
+  ownerUserId      String?
+  status           ContactStatus    @default(active)
+  tags             String[]         @default([])
+  // Reuses Customer's priority enum (spec 008) — same business concept, not
+  // duplicated as a separate ContactPriority type.
+  priority         CustomerPriority @default(medium)
+  // Defaults to false at most one per customerId enforced by a partial unique index
+  // added by hand in the migration (research.md #4) — Prisma cannot express a
+  // partial `WHERE is_primary = true` unique constraint in the schema itself.
+  isPrimary        Boolean          @default(false)
+  customFields     Json             @default("{}")
+  // Non-null = this row was discarded in a merge (research.md #6); status keeps
+  // whatever it was before the merge, same pattern as Customer.mergedIntoCustomerId.
+  mergedIntoContactId String?
+  version          Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  mergedInto     Contact?        @relation("ContactMerge", fields: [mergedIntoContactId], references: [id])
+  mergedContacts Contact[]       @relation("ContactMerge")
+  history        ContactHistory[]
+
+  @@index([organizationId, status])
+  @@index([customerId])
+  @@map("contacts")
+}
+
+model ContactHistory {
+  id              String   @id @default(uuid())
+  contactId       String
+  changedByUserId String
+  changes         Json
+  changedAt       DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("contact_history")
 }
