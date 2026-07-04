@@ -181,8 +181,8 @@ Modules:
 
 - Customers ✅ **implementado** (2026-07-03) — ver estado abajo
 - Contacts ✅ **implementado** (2026-07-03) — ver estado abajo
-- Leads
-- Opportunities
+- Leads ✅ **implementado** (2026-07-04) — ver estado abajo
+- Opportunities (mínima — ver nota en el estado de Leads)
 - Activities
 - Tasks
 - Dashboard
@@ -191,8 +191,9 @@ Modules:
 
 Mapea a [specs/001-crm-fase1-clientes-pipeline/spec.md](../specs/001-crm-fase1-clientes-pipeline/spec.md)
 (superseded) y, por entidad, a
-[specs/008-customers/spec.md](../specs/008-customers/spec.md) y
-[specs/009-contacts/spec.md](../specs/009-contacts/spec.md).
+[specs/008-customers/spec.md](../specs/008-customers/spec.md),
+[specs/009-contacts/spec.md](../specs/009-contacts/spec.md) y
+[specs/010-leads/spec.md](../specs/010-leads/spec.md).
 
 ### Estado de implementación — Customers (spec 008)
 
@@ -258,6 +259,46 @@ como defensa en profundidad — Prisma no puede expresar un índice único parci
 `isPrimary = false` incondicionalmente, incluso si era el principal del Customer de
 origen (research.md #5) — el Customer de origen queda sin principal hasta que se
 designe uno nuevo manualmente, tal como pide el edge case de spec.md.
+
+### Estado de implementación — Leads (spec 010)
+
+Las 5 historias de usuario están implementadas y testeadas
+(`backend/src/modules/leads/`): alta/calificación/asignación de responsable, notas
+ilimitadas + próxima acción + adjuntos (sin el registro de actividades tipo llamada/
+reunión/email, diferido a spec 012 — research.md #9), conversión en Customer + Contact
+principal + Opportunity en una única operación transaccional, marcar como perdido y
+reactivar (restaurando el estado exacto previo a la pérdida), y búsqueda/timeline/
+importación en lote. 24 tests nuevos (integration + E2E) pasando contra la misma base
+Postgres real, para un total de 160 tests en el backend.
+
+Primer módulo de la Fase 2 con **dos** dependencias de Fase 2 simultáneas: la
+conversión (US3) consume `CustomerRepository` (spec 008) y `ContactRepository`
+(spec 009) dentro de una única transacción Prisma. Esa misma transacción resuelve el
+edge case de conversiones concurrentes: un `updateMany` condicional
+(`status IN (Nuevo, Contactado, Calificado, EnNegociacion)`) es el paso que decide la
+carrera — verificado con un test que dispara 5 conversiones simultáneas sobre el mismo
+Lead y confirma exactamente 1 éxito y un solo Customer/Contact creados
+(`specs/010-leads/research.md` #11).
+
+**Excepción documentada de Modular by Design**: la conversión también crea una
+`Opportunity`, pero ese módulo es de spec 011 (sin implementar). Se agregó una tabla
+`Opportunity` mínima (sin Pipeline configurable, KPIs ni forecast) con sus enums
+tomados literalmente de `specs/011-opportunities/spec.md`, escrita únicamente por un
+repositorio deliberadamente angosto (`opportunity-stub.repository.ts`, solo `create`)
+hasta que spec 011 se implemente y absorba la propiedad de la tabla
+(`specs/010-leads/research.md` #10 y plan.md § Complexity Tracking) — decisión
+confirmada explícitamente con el usuario antes de implementar, junto con diferir el
+registro de actividades (arriba) a spec 012.
+
+Una revisión de seguridad post-implementación encontró y corrigió un bug real antes de
+cerrar la spec: `ConvertLeadUseCase` resolvía `linkToExistingCustomerId`/
+`linkToExistingContactId` con una consulta sin filtrar por `organizationId`
+(`tx.customer.findUniqueOrThrow({ where: { id } })`), permitiendo en teoría vincular la
+conversión de un Lead a un Customer/Contact de **otra** Organization. Se corrigió
+resolviendo y validando ambos ids con los repositorios ya scoped
+(`CustomerRepository.findById`/`ContactRepository.findById`) **antes** de la
+transacción, rechazando con 400 si no pertenecen a la Organization del Lead — cubierto
+por un test dedicado (`leads-convert-link-cross-org.spec.ts`).
 
 ---
 

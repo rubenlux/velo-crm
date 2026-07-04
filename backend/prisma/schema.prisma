@@ -59,10 +59,10 @@ model User {
   status      UserStatus @default(Active)
   deletedAt   DateTime?
 
-  oauthAccounts          OAuthAccount[]
-  sessions               Session[]
-  devices                Device[]
-  passwordResetTokens    PasswordResetToken[]
+  oauthAccounts           OAuthAccount[]
+  sessions                Session[]
+  devices                 Device[]
+  passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
@@ -98,17 +98,17 @@ model Device {
 }
 
 model Session {
-  id                    String        @id @default(uuid())
-  userId                String
-  deviceId              String
-  refreshTokenHash      String
-  refreshTokenFamilyId  String
-  status                SessionStatus @default(active)
-  rememberMe            Boolean       @default(false)
-  expiresAt             DateTime
-  lastActivityAt        DateTime      @default(now())
-  createdAt             DateTime      @default(now())
-  revokedAt             DateTime?
+  id                   String        @id @default(uuid())
+  userId               String
+  deviceId             String
+  refreshTokenHash     String
+  refreshTokenFamilyId String
+  status               SessionStatus @default(active)
+  rememberMe           Boolean       @default(false)
+  expiresAt            DateTime
+  lastActivityAt       DateTime      @default(now())
+  createdAt            DateTime      @default(now())
+  revokedAt            DateTime?
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
@@ -221,6 +221,13 @@ enum AuditLogAction {
   ContactArchived
   ContactRestored
   ContactMerged
+  LeadCreated
+  LeadUpdated
+  LeadOwnerChanged
+  LeadStatusChanged
+  LeadConverted
+  LeadLost
+  LeadReactivated
 }
 
 model Organization {
@@ -238,12 +245,14 @@ model Organization {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  memberships Membership[]
-  invitations OrganizationInvitation[]
-  auditLogs   AuditLog[]
-  roles       Role[]
-  customers   Customer[]
-  contacts    Contact[]
+  memberships   Membership[]
+  invitations   OrganizationInvitation[]
+  auditLogs     AuditLog[]
+  roles         Role[]
+  customers     Customer[]
+  contacts      Contact[]
+  leads         Lead[]
+  opportunities Opportunity[]
 
   @@map("organizations")
 }
@@ -385,40 +394,41 @@ enum CustomerPriority {
 }
 
 model Customer {
-  id             String           @id @default(uuid())
-  organizationId String
-  name           String
-  legalName      String?
-  tradeName      String?
-  type           CustomerType     @default(company)
-  taxId          String?
-  taxCondition   String?
-  email          String?
-  phone          String?
-  website        String?
-  country        String?
-  state          String?
-  city           String?
-  address        String?
-  ownerUserId    String?
-  source         String?
-  category       String?
-  tags           String[]         @default([])
-  priority       CustomerPriority @default(medium)
-  customFields   Json             @default("{}")
-  status         CustomerStatus   @default(active)
+  id                   String           @id @default(uuid())
+  organizationId       String
+  name                 String
+  legalName            String?
+  tradeName            String?
+  type                 CustomerType     @default(company)
+  taxId                String?
+  taxCondition         String?
+  email                String?
+  phone                String?
+  website              String?
+  country              String?
+  state                String?
+  city                 String?
+  address              String?
+  ownerUserId          String?
+  source               String?
+  category             String?
+  tags                 String[]         @default([])
+  priority             CustomerPriority @default(medium)
+  customFields         Json             @default("{}")
+  status               CustomerStatus   @default(active)
   // Non-null = this row was discarded in a merge; research.md #6. Never a new
   // CustomerStatus value — status keeps whatever it was before the merge.
   mergedIntoCustomerId String?
-  version        Int              @default(1)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  version              Int              @default(1)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   mergedInto      Customer?         @relation("CustomerMerge", fields: [mergedIntoCustomerId], references: [id])
   mergedCustomers Customer[]        @relation("CustomerMerge")
   history         CustomerHistory[]
   contacts        Contact[]
+  opportunities   Opportunity[]
 
   // NULLs don't count as duplicates in Postgres unique constraints (research.md #3):
   // multiple Customers without a taxId in the same Organization can coexist.
@@ -454,56 +464,57 @@ enum ContactStatus {
 }
 
 model Contact {
-  id             String        @id @default(uuid())
-  organizationId String
-  customerId     String
-  firstName      String
-  lastName       String
-  photoUrl       String?
-  birthDate      DateTime?
-  gender         String?
-  jobTitle       String?
-  department     String?
-  area           String?
-  decisionLevel  String?
+  id                  String           @id @default(uuid())
+  organizationId      String
+  customerId          String
+  firstName           String
+  lastName            String
+  photoUrl            String?
+  birthDate           DateTime?
+  gender              String?
+  jobTitle            String?
+  department          String?
+  area                String?
+  decisionLevel       String?
   // Denormalized from Customer.name at creation time to avoid a JOIN on every
   // search-by-company (research.md #8) — not kept in strict sync if the Customer is
   // later renamed.
-  company          String?
-  primaryEmail     String?
-  secondaryEmails  String[]         @default([])
-  primaryPhone     String?
-  secondaryPhones  String[]         @default([])
-  whatsapp         String?
-  linkedin         String?
-  website          String?
-  country          String?
-  state            String?
-  city             String?
-  address          String?
-  ownerUserId      String?
-  status           ContactStatus    @default(active)
-  tags             String[]         @default([])
+  company             String?
+  primaryEmail        String?
+  secondaryEmails     String[]         @default([])
+  primaryPhone        String?
+  secondaryPhones     String[]         @default([])
+  whatsapp            String?
+  linkedin            String?
+  website             String?
+  country             String?
+  state               String?
+  city                String?
+  address             String?
+  ownerUserId         String?
+  status              ContactStatus    @default(active)
+  tags                String[]         @default([])
   // Reuses Customer's priority enum (spec 008) — same business concept, not
   // duplicated as a separate ContactPriority type.
-  priority         CustomerPriority @default(medium)
+  priority            CustomerPriority @default(medium)
   // Defaults to false at most one per customerId enforced by a partial unique index
   // added by hand in the migration (research.md #4) — Prisma cannot express a
   // partial `WHERE is_primary = true` unique constraint in the schema itself.
-  isPrimary        Boolean          @default(false)
-  customFields     Json             @default("{}")
+  isPrimary           Boolean          @default(false)
+  customFields        Json             @default("{}")
   // Non-null = this row was discarded in a merge (research.md #6); status keeps
   // whatever it was before the merge, same pattern as Customer.mergedIntoCustomerId.
   mergedIntoContactId String?
-  version          Int              @default(1)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  version             Int              @default(1)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  mergedInto     Contact?        @relation("ContactMerge", fields: [mergedIntoContactId], references: [id])
-  mergedContacts Contact[]       @relation("ContactMerge")
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  mergedInto     Contact?         @relation("ContactMerge", fields: [mergedIntoContactId], references: [id])
+  mergedContacts Contact[]        @relation("ContactMerge")
   history        ContactHistory[]
+  opportunities  Opportunity[]
 
   @@index([organizationId, status])
   @@index([customerId])
@@ -521,4 +532,179 @@ model ContactHistory {
 
   @@index([contactId])
   @@map("contact_history")
+}
+
+// Leads module (spec 010-leads)
+// See specs/010-leads/data-model.md for the source of truth.
+// Lead.organizationId filters every query at the repository level (research.md #1).
+// No physical delete ever (FR-014) — logical states are Perdido/Archivado only.
+
+enum LeadStatus {
+  Nuevo
+  Contactado
+  Calificado
+  EnNegociacion
+  Convertido
+  Perdido
+  Archivado
+}
+
+enum LeadSource {
+  SitioWeb
+  Formulario
+  RedesSociales
+  Referido
+  Llamada
+  Email
+  Importacion
+  Evento
+  CargaManual
+  Api
+}
+
+model Lead {
+  id                     String           @id @default(uuid())
+  organizationId         String
+  name                   String
+  company                String?
+  jobTitle               String?
+  email                  String?
+  phone                  String?
+  whatsapp               String?
+  country                String?
+  state                  String?
+  city                   String?
+  address                String?
+  source                 LeadSource       @default(CargaManual)
+  campaign               String?
+  interest               String?
+  // Nullable pese a FR-003 — ver research.md #4 (Acceptance Scenario 4, US1 describe
+  // explícitamente un Lead sin responsable asignado).
+  ownerUserId            String?
+  status                 LeadStatus       @default(Nuevo)
+  // Poblado al marcar Perdido, restaurado y limpiado al reactivar (research.md #12).
+  statusBeforeLost       LeadStatus?
+  // Reutiliza el enum de spec 008 (mismo concepto de negocio, sin duplicar tipo).
+  priority               CustomerPriority @default(medium)
+  // 0-100, editable manualmente — sin fórmula automática en esta fase (research.md #5).
+  score                  Int?
+  tags                   String[]         @default([])
+  lastContactedAt        DateTime?
+  nextActionAt           DateTime?
+  nextActionNote         String?
+  customFields           Json             @default("{}")
+  // Poblados atómicamente por la conversión (US3, research.md #10, #11) — todos
+  // no-null juntos o todos null, nunca un subconjunto.
+  convertedCustomerId    String?
+  convertedContactId     String?
+  convertedOpportunityId String?
+  convertedAt            DateTime?
+  version                Int              @default(1)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  history       LeadHistory[]
+  notes         LeadNote[]
+  attachments   LeadAttachment[]
+  opportunities Opportunity[]
+
+  @@index([organizationId, status])
+  @@map("leads")
+}
+
+model LeadHistory {
+  id              String   @id @default(uuid())
+  leadId          String
+  changedByUserId String
+  changes         Json
+  changedAt       DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_history")
+}
+
+model LeadNote {
+  id           String   @id @default(uuid())
+  leadId       String
+  authorUserId String
+  note         String
+  createdAt    DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_notes")
+}
+
+model LeadAttachment {
+  id               String   @id @default(uuid())
+  leadId           String
+  fileName         String
+  // Referencia externa; sin almacenamiento binario propio (research.md #8), mismo
+  // patrón que User.avatarUrl/Organization.logoUrl.
+  fileUrl          String
+  uploadedByUserId String
+  uploadedAt       DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_attachments")
+}
+
+// Opportunity: modelo MÍNIMO (research.md #10). Sin OpportunitiesModule (spec 011 no
+// implementada) — el único escritor es leads/infrastructure/opportunity-stub.repository.ts
+// (solo `create`). spec 011 absorberá la propiedad de esta tabla, agregando sus
+// propios campos (probabilidad, valor ponderado, configuración de Pipeline, KPIs) en
+// una migración propia.
+
+// Valores tomados literalmente de specs/011-opportunities/spec.md Key Entities — esta
+// spec (010) solo escribe Abierta/Nueva.
+enum OpportunityState {
+  Abierta
+  Ganada
+  Perdida
+  Cancelada
+  Archivada
+}
+
+enum PipelineStage {
+  Nueva
+  Calificada
+  Descubrimiento
+  Propuesta
+  Negociacion
+  Cierre
+  Ganada
+  Perdida
+}
+
+model Opportunity {
+  id             String           @id @default(uuid())
+  organizationId String
+  customerId     String
+  contactId      String?
+  // No-null solo si se originó por conversión de un Lead (spec 011 Key Entities).
+  leadId         String?
+  name           String
+  ownerUserId    String?
+  estimatedValue Decimal?         @db.Decimal(14, 2)
+  state          OpportunityState @default(Abierta)
+  stage          PipelineStage    @default(Nueva)
+  source         String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  contact      Contact?     @relation(fields: [contactId], references: [id])
+  lead         Lead?        @relation(fields: [leadId], references: [id])
+
+  @@index([organizationId, state])
+  @@index([customerId])
+  @@index([leadId])
+  @@map("opportunities")
 }

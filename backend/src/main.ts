@@ -8,6 +8,7 @@ import { UsersExceptionsFilter } from './modules/users/api/users-exceptions.filt
 import { RolesExceptionsFilter } from './modules/roles/api/roles-exceptions.filter';
 import { CustomersExceptionsFilter } from './modules/customers/api/customers-exceptions.filter';
 import { ContactsExceptionsFilter } from './modules/contacts/api/contacts-exceptions.filter';
+import { LeadsExceptionsFilter } from './modules/leads/api/leads-exceptions.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,7 @@ async function bootstrap(): Promise<void> {
     new RolesExceptionsFilter(app.get(HttpAdapterHost)),
     new CustomersExceptionsFilter(app.get(HttpAdapterHost)),
     new ContactsExceptionsFilter(app.get(HttpAdapterHost)),
+    new LeadsExceptionsFilter(app.get(HttpAdapterHost)),
   );
   await app.listen(process.env.PORT ?? 3000);
 }

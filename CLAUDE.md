@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/009-contacts/plan.md (see also docs/implementation-plan.md
+specs/010-leads/plan.md (see also docs/implementation-plan.md
 for the overall project roadmap and tech stack).
 <!-- SPECKIT END -->
 
@@ -32,8 +32,9 @@ monolithic "CRM Fase 1" spec before it got decomposed).
 audit log, no-TODO/no-console.log quality gates).
 
 **Code status**: Specs 004 (Authentication & Identity), 005 (Organizations,
-Multi-Tenant), 006 (Users), 007 (Roles & Permissions), 008 (Customers) and 009
-(Contacts) are fully implemented — 134 backend tests passing (0 frontend tests yet).
+Multi-Tenant), 006 (Users), 007 (Roles & Permissions), 008 (Customers), 009
+(Contacts) and 010 (Leads) are fully implemented — 160 backend tests passing (0
+frontend tests yet).
 Spec 004: register/verify/login/logout, password reset/change, Google/Microsoft
 OAuth, session/device management, TOTP MFA. Spec 005: create/configure Organization
 with automatic Propietario Membership, branding/tax/modules by plan, invitations
@@ -56,8 +57,15 @@ Contact CRUD nested under a Customer (hard FK, `onDelete: Restrict`), a single
 primary Contact per Customer enforced by both a transaction and a Postgres partial
 unique index, search across primary/secondary emails and phones, a calculated
 timeline (same pattern as spec 008), and transfer/merge — see
-`specs/009-contacts/research.md` and the "Contacts module" note below. Everything
-else (specs 010-026) is spec-only, no implementation yet. Next up: **spec 010 Leads**.
+`specs/009-contacts/research.md` and the "Contacts module" note below. Spec 010 (first
+module with two Fase 2 dependencies at once): Lead register/qualify/assign, notes +
+next action + attachments (activity-type logging deferred to spec 012), a single
+transactional conversion into a Customer + primary Contact + a **minimal** Opportunity
+row (spec 011 isn't implemented yet — see the "Leads module" note below), lose/
+reactivate (restoring the exact pre-loss status), and search/timeline/batch import —
+see `specs/010-leads/research.md` and the "Leads module" note below. Everything else
+(specs 011-026) is spec-only, no implementation yet. Next up: **spec 011
+Opportunities**.
 
 **Authorization architecture (deny-by-default, hardened after a security review)**:
 `AuthGuard` (identity) is registered globally as `APP_GUARD` in `AppModule` — every
@@ -120,6 +128,32 @@ primary. Reuses `contact.*` permission keys and the History-table-plus-calculate
 timeline pattern from spec 008 without modification — see
 `specs/009-contacts/research.md` for the full rationale.
 
+**Leads module (spec 010)**: `LeadsModule` is the first Fase 2 module importing
+**two** other Fase 2 modules at once (`CustomersModule` + `ContactsModule`), both
+consumed only inside `ConvertLeadUseCase`'s single Prisma transaction. Conversion
+race-safety comes from a conditional `updateMany` (`status IN (...)` as the WHERE
+guard) as the transaction's first write — if it affects 0 rows, another request
+already converted the Lead, and everything after is skipped; verified by a test that
+fires 5 concurrent conversions at the same Lead and asserts exactly 1 success. When
+resolving `linkToExistingCustomerId`/`linkToExistingContactId`, always validate through
+the already-org-scoped `CustomerRepository.findById`/`ContactRepository.findById` —
+never `tx.customer.findUniqueOrThrow({ where: { id } })` directly, which has no
+`organizationId` filter and was a real cross-tenant bug caught during this spec's own
+security review (fixed before merge). `Opportunity` is a **minimal**, temporarily-owned
+table (research.md #10): no Pipeline configuration, KPIs, or forecast — those are spec
+011's job. Its enum values (`OpportunityState`, `PipelineStage`) are copied verbatim
+from `specs/011-opportunities/spec.md` Key Entities so spec 011 won't need a migration
+just to add values already known today. The only writer is
+`leads/infrastructure/opportunity-stub.repository.ts` (`create` only) — when spec 011
+is implemented, its `OpportunitiesModule` takes over as owner and `LeadsModule` should
+switch to importing its real exported repository instead. "Registrar actividades"
+(calls/meetings/emails) has no implementation in this spec — spec 012 (Activities)
+explicitly claims sole ownership of that concept across Customer/Contact/Lead/
+Opportunity, and specs 008/009 already established the precedent of not building a
+stand-in. Reuses `lead.*` permission keys (spec 007) — `lead.delete` stays unused,
+since Leads have no destructive operation (FR-014 forbids physical deletion in every
+state).
+
 **Local dev DB**: Backend tests and the dev server both run against an isolated Docker
 container (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) —
 separate from any other local Postgres instance. Start it with `docker start
@@ -133,4 +167,21 @@ with `EPERM: operation not permitted, rename ...query_engine-windows.dll.node...
 the `nest start --watch` dev server is still running — it holds a lock on the engine
 DLL. Kill the process on port 3000 first (`Get-NetTCPConnection -State Listen |
 Where-Object {$_.LocalPort -eq 3000}` then `Stop-Process -Id <pid> -Force`), then
-regenerate, then restart the dev server.
+regenerate, then restart the dev server. `nest start --watch` can respawn under a new
+PID after being killed once — recheck the port after killing and kill again if it's
+still listening, before rerunning Prisma.
+
+**Prisma migration workflow when hand-editing generated SQL**: after `prisma migrate
+dev --create-only`, hand-edit `migration.sql` (e.g. to add `pg_trgm`/GIN indexes, or to
+strip erroneous `DROP INDEX` statements Prisma's diff proposes for indexes that were
+themselves hand-added in an earlier migration and aren't represented in
+`schema.prisma` — always check the generated SQL for these before applying, they will
+silently regress an earlier spec's search performance if applied). Then apply with
+`npx prisma migrate deploy`, not plain `migrate dev` — `migrate dev` re-validates
+against a shadow database interactively and can hang waiting on a prompt in a
+non-interactive shell. If a previous `migrate dev` run was interrupted mid-shadow-db
+cleanup, `migrate deploy` may then fail with `P1002` (timed out acquiring the Prisma
+advisory lock) — find and terminate the stuck connection first: `docker exec
+velo-test-db psql -U velo -d velo_test -c "SELECT pid, query FROM pg_stat_activity
+WHERE datname='velo_test'"`, then `SELECT pg_terminate_backend(<pid>)` on the one
+still running the shadow-db `DROP DATABASE`.

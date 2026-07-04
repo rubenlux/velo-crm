@@ -13,6 +13,7 @@ interface QuickCreateItem {
 const ITEMS: QuickCreateItem[] = [
   { label: 'Cliente', icon: 'users', color: 'var(--accent)', route: 'customers/new' },
   { label: 'Contacto', icon: 'contact', color: 'var(--blue)', route: 'contacts' },
+  { label: 'Prospecto', icon: 'target', color: 'var(--purple)', route: 'leads/new' },
   { label: 'Oportunidad', icon: 'trending', color: 'var(--purple)', route: 'pipeline' },
   { label: 'Cotización', icon: 'file', color: 'var(--blue)', route: 'm/cotizaciones' },
   { label: 'Factura', icon: 'receipt', color: 'var(--purple)', route: 'm/facturacion' },

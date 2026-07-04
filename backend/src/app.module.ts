@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
+import { LeadsModule } from './modules/leads/leads.module';
 import { AuthGuard } from './modules/identity/api/auth.guard';
 
 @Module({
@@ -19,6 +20,7 @@ import { AuthGuard } from './modules/identity/api/auth.guard';
     RolesModule,
     CustomersModule,
     ContactsModule,
+    LeadsModule,
   ],
   controllers: [AppController],
   providers: [

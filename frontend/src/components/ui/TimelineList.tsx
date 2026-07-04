@@ -2,13 +2,17 @@ import { Icon } from '../../lib/icons';
 import { Card } from './Card';
 
 export interface TimelineEntryLike {
-  type: 'audit' | 'edit';
+  type: 'audit' | 'edit' | 'note';
   occurredAt: string;
   actorUserId: string | null;
   detail: unknown;
 }
 
-function describe(entry: TimelineEntryLike): { title: string; icon: 'file' | 'check' | 'trending' | 'x' } {
+function describe(entry: TimelineEntryLike): { title: string; icon: 'file' | 'check' | 'trending' | 'x' | 'note' } {
+  if (entry.type === 'note') {
+    const { note } = entry.detail as { note: string };
+    return { title: `Nota: ${note}`, icon: 'note' };
+  }
   if (entry.type === 'edit') {
     const changes = (entry.detail as { changes: Record<string, { before: unknown; after: unknown }> }).changes;
     return { title: `Editado: ${Object.keys(changes).join(', ')}`, icon: 'file' };
@@ -27,6 +31,13 @@ function describe(entry: TimelineEntryLike): { title: string; icon: 'file' | 'ch
     ContactMerged: 'Fusionado',
     ContactCustomerChanged: 'Transferido a otro Customer',
     ContactPrimaryChanged: 'Contacto principal actualizado',
+    LeadCreated: 'Prospecto creado',
+    LeadUpdated: 'Actualizado',
+    LeadOwnerChanged: 'Responsable actualizado',
+    LeadStatusChanged: 'Estado actualizado',
+    LeadConverted: 'Convertido en Cliente/Contacto/Oportunidad',
+    LeadLost: 'Marcado como Perdido',
+    LeadReactivated: 'Reactivado',
   };
   return { title: labels[action] ?? action, icon: action.includes('Archived') ? 'x' : action.includes('Created') ? 'check' : 'trending' };
 }

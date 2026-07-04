@@ -18,6 +18,7 @@ const GROUPS: { title: string; items: Command[] }[] = [
       { label: 'Panel principal', icon: 'dashboard', color: 'var(--accent)', route: '' },
       { label: 'Clientes', icon: 'users', color: 'var(--blue)', route: 'customers' },
       { label: 'Contactos', icon: 'contact', color: 'var(--blue)', route: 'contacts' },
+      { label: 'Prospectos', icon: 'target', color: 'var(--purple)', route: 'leads' },
       { label: 'Pipeline CRM', icon: 'trending', color: 'var(--purple)', route: 'pipeline' },
       { label: 'Tareas', icon: 'check', color: 'var(--green-text)', route: 'tasks' },
       { label: 'Reportes', icon: 'chart', color: 'var(--amber)', route: 'reports' },

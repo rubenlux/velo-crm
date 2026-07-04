@@ -10,6 +10,7 @@ import { RolesExceptionsFilter } from '../src/modules/roles/api/roles-exceptions
 import { DefaultRolesSeeder } from '../src/modules/roles/infrastructure/default-roles.seeder';
 import { CustomersExceptionsFilter } from '../src/modules/customers/api/customers-exceptions.filter';
 import { ContactsExceptionsFilter } from '../src/modules/contacts/api/contacts-exceptions.filter';
+import { LeadsExceptionsFilter } from '../src/modules/leads/api/leads-exceptions.filter';
 
 export async function createTestApp(): Promise<{ app: INestApplication; prisma: PrismaService }> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -23,6 +24,7 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     new RolesExceptionsFilter(app.get(HttpAdapterHost)),
     new CustomersExceptionsFilter(app.get(HttpAdapterHost)),
     new ContactsExceptionsFilter(app.get(HttpAdapterHost)),
+    new LeadsExceptionsFilter(app.get(HttpAdapterHost)),
   );
   await app.init();
   // Belt-and-suspenders alongside DefaultRolesSeeder's OnModuleInit hook (already
@@ -35,6 +37,13 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
 
 export async function resetDatabase(prisma: PrismaService): Promise<void> {
   await prisma.auditLog.deleteMany();
+  // opportunities before customers/contacts/leads — Opportunity.customerId is
+  // onDelete: Restrict (spec 010 data-model.md), same reasoning as Contact.customerId.
+  await prisma.opportunity.deleteMany();
+  await prisma.leadAttachment.deleteMany();
+  await prisma.leadNote.deleteMany();
+  await prisma.leadHistory.deleteMany();
+  await prisma.lead.deleteMany();
   // contact_history/contacts before customer_history/customers — Contact.customerId
   // is onDelete: Restrict (spec 009 research.md #1), so a Customer with Contacts
   // still attached cannot be deleted first.

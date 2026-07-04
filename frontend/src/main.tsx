@@ -24,6 +24,11 @@ import { ContactForm } from './features/contacts/ContactForm';
 import { ContactDetail } from './features/contacts/ContactDetail';
 import { ContactTimeline } from './features/contacts/ContactTimeline';
 import { TransferOrMergeContact } from './features/contacts/TransferOrMergeContact';
+import { LeadsList } from './features/leads/LeadsList';
+import { LeadForm } from './features/leads/LeadForm';
+import { LeadDetail } from './features/leads/LeadDetail';
+import { LeadTimeline } from './features/leads/LeadTimeline';
+import { ConvertLead } from './features/leads/ConvertLead';
 import { TasksMock } from './features/tasks/TasksMock';
 import { CalendarMock } from './features/calendar/CalendarMock';
 import { ReportsMock } from './features/reports/ReportsMock';
@@ -81,6 +86,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="contacts/:contactId/edit" element={<ContactForm />} />
           <Route path="contacts/:contactId/timeline" element={<ContactTimeline />} />
           <Route path="contacts/:contactId/transfer-merge" element={<TransferOrMergeContact />} />
+
+          <Route path="leads" element={<LeadsList />} />
+          <Route path="leads/new" element={<LeadForm />} />
+          <Route path="leads/:leadId" element={<LeadDetail />} />
+          <Route path="leads/:leadId/convert" element={<ConvertLead />} />
+          <Route path="leads/:leadId/timeline" element={<LeadTimeline />} />
 
           <Route path="calendar" element={<CalendarMock />} />
           <Route path="tasks" element={<TasksMock />} />

@@ -37,6 +37,21 @@ export class CustomerRepository {
     return this.prisma.customer.findFirst({ where: { organizationId, taxId } });
   }
 
+  // Duplicate detection for Lead conversion (spec 010, research.md #11) — exact match
+  // only, not the fuzzy `search()` OR-across-fields query.
+  findByEmailOrPhone(organizationId: string, email?: string | null, phone?: string | null): Promise<Customer | null> {
+    if (!email && !phone) {
+      return Promise.resolve(null);
+    }
+    return this.prisma.customer.findFirst({
+      where: {
+        organizationId,
+        mergedIntoCustomerId: null,
+        OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])],
+      },
+    });
+  }
+
   async updateWithVersionCheck(
     organizationId: string,
     customerId: string,

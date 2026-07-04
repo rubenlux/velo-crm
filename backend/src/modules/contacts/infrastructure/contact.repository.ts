@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Contact, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 
+type Db = Pick<PrismaService, 'contact'>;
+
 export interface ContactSearchFilters {
   q?: string;
   customerId?: string;
@@ -16,14 +18,29 @@ export interface ContactSearchFilters {
 export class ContactRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: Prisma.ContactUncheckedCreateInput): Promise<Contact> {
-    return this.prisma.contact.create({ data });
+  create(data: Prisma.ContactUncheckedCreateInput, db: Db = this.prisma): Promise<Contact> {
+    return db.contact.create({ data });
   }
 
   // Scoped by organizationId in the query itself — same defense-in-depth pattern as
   // CustomerRepository/OrganizationInvitationRepository.
   findById(organizationId: string, contactId: string): Promise<Contact | null> {
     return this.prisma.contact.findFirst({ where: { id: contactId, organizationId } });
+  }
+
+  // Duplicate detection for Lead conversion (spec 010, research.md #11) — exact match
+  // only, not the fuzzy `search()` OR-across-fields query.
+  findByEmailOrPhone(organizationId: string, email?: string | null, phone?: string | null): Promise<Contact | null> {
+    if (!email && !phone) {
+      return Promise.resolve(null);
+    }
+    return this.prisma.contact.findFirst({
+      where: {
+        organizationId,
+        mergedIntoContactId: null,
+        OR: [...(email ? [{ primaryEmail: email }] : []), ...(phone ? [{ primaryPhone: phone }] : [])],
+      },
+    });
   }
 
   findPrimaryForCustomer(organizationId: string, customerId: string): Promise<Contact | null> {

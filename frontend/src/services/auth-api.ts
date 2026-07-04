@@ -28,6 +28,9 @@ export class AuthApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    // Full JSON error body, for callers that need fields beyond `message` (e.g. the
+    // Lead conversion duplicate-warning candidates, specs/010-leads/contracts).
+    public readonly payload?: unknown,
   ) {
     super(message);
     this.name = 'AuthApiError';
