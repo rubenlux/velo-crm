@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthApiError, confirmPasswordReset } from '../../services/auth-api';
+import { AuthLayout, AuthInput, AuthError, AuthSubmit } from './AuthLayout';
 
 export function ResetPassword() {
   const navigate = useNavigate();
@@ -32,20 +33,20 @@ export function ResetPassword() {
 
   if (!token) {
     return (
-      <main>
-        <h1>Enlace inválido</h1>
-        <Link to="/forgot-password">Solicitar un nuevo enlace</Link>
-      </main>
+      <AuthLayout title="Enlace inválido">
+        <Link to="/forgot-password" className="text-[12.5px] font-bold text-accent">
+          Solicitar un nuevo enlace
+        </Link>
+      </AuthLayout>
     );
   }
 
   return (
-    <main>
-      <h1>Restablecer contraseña</h1>
+    <AuthLayout title="Restablecer contraseña">
       <form onSubmit={handleSubmit}>
-        <label htmlFor="reset-new-password">Nueva contraseña</label>
-        <input
+        <AuthInput
           id="reset-new-password"
+          label="Nueva contraseña"
           type="password"
           required
           minLength={8}
@@ -54,15 +55,13 @@ export function ResetPassword() {
         />
 
         {error && (
-          <p role="alert">
+          <AuthError>
             {error} <Link to="/forgot-password">Solicitar de nuevo</Link>
-          </p>
+          </AuthError>
         )}
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Guardando…' : 'Guardar nueva contraseña'}
-        </button>
+        <AuthSubmit submitting={submitting}>{submitting ? 'Guardando…' : 'Guardar nueva contraseña'}</AuthSubmit>
       </form>
-    </main>
+    </AuthLayout>
   );
 }

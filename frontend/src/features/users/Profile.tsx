@@ -2,6 +2,10 @@ import { FormEvent, useEffect, useState } from 'react';
 import { AuthApiError } from '../../services/auth-api';
 import { UserProfile, getMyProfile, updateMyProfile } from '../../services/users-api';
 import { getSession } from '../../services/session';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { FormInput } from '../../components/ui/Field';
+import { Avatar } from '../../components/ui/Avatar';
 
 export function Profile() {
   const session = getSession();
@@ -32,7 +36,8 @@ export function Profile() {
       })
       .catch((err) => setError(err instanceof AuthApiError ? err.message : 'No se pudo cargar el perfil.'))
       .finally(() => setLoading(false));
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.accessToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,38 +63,46 @@ export function Profile() {
     return null;
   }
   if (loading) {
-    return <p>Cargando perfil…</p>;
+    return <p className="text-[13px] text-text-2">Cargando perfil…</p>;
   }
   if (!profile) {
-    return <p role="alert">{error ?? 'Perfil no encontrado.'}</p>;
+    return <p className="font-semibold text-red-text">{error ?? 'Perfil no encontrado.'}</p>;
   }
 
+  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase() || profile.email[0].toUpperCase();
+
   return (
-    <main>
-      <h1>Mi perfil</h1>
-      {error && <p role="alert">{error}</p>}
-      {status && <p role="status">{status}</p>}
+    <Card className="p-6">
+      <div className="mb-5 text-[15px] font-extrabold">Perfil</div>
+      <p className="-mt-4 mb-5 text-[12.5px] text-text-2">Actualiza tu información personal y preferencias.</p>
+      <div className="mb-5 flex items-center gap-4">
+        <Avatar initials={initials} gradient="linear-gradient(140deg,#5B93EA,#7C6BDD)" size="lg" />
+        <div className="text-[13px] text-text-2">{profile.email}</div>
+      </div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormInput id="profile-first-name" label="Nombre" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+        <FormInput id="profile-last-name" label="Apellido" value={lastName} onChange={(event) => setLastName(event.target.value)} />
+        <FormInput id="profile-avatar" label="Avatar (URL)" value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} />
+        <FormInput id="profile-language" label="Idioma" value={language} onChange={(event) => setLanguage(event.target.value)} />
+        <FormInput id="profile-timezone" label="Zona horaria" value={timezone} onChange={(event) => setTimezone(event.target.value)} className="sm:col-span-2" />
 
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="profile-first-name">Nombre</label>
-        <input id="profile-first-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+        {error && (
+          <p role="alert" className="sm:col-span-2 text-[12.5px] font-semibold text-red-text">
+            {error}
+          </p>
+        )}
+        {status && (
+          <p role="status" className="sm:col-span-2 text-[12.5px] font-semibold text-green-text">
+            {status}
+          </p>
+        )}
 
-        <label htmlFor="profile-last-name">Apellido</label>
-        <input id="profile-last-name" value={lastName} onChange={(event) => setLastName(event.target.value)} />
-
-        <label htmlFor="profile-avatar">Avatar (URL)</label>
-        <input id="profile-avatar" value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} />
-
-        <label htmlFor="profile-language">Idioma</label>
-        <input id="profile-language" value={language} onChange={(event) => setLanguage(event.target.value)} />
-
-        <label htmlFor="profile-timezone">Zona horaria</label>
-        <input id="profile-timezone" value={timezone} onChange={(event) => setTimezone(event.target.value)} />
-
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Guardando…' : 'Guardar cambios'}
-        </button>
+        <div className="sm:col-span-2">
+          <Button type="submit" variant="primary" disabled={submitting}>
+            {submitting ? 'Guardando…' : 'Guardar cambios'}
+          </Button>
+        </div>
       </form>
-    </main>
+    </Card>
   );
 }

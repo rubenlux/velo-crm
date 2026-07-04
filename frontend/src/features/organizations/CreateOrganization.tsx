@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { AuthApiError } from '../../services/auth-api';
 import { createOrganization } from '../../services/organizations-api';
 import { getSession, setActiveOrganizationId } from '../../services/session';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { FormInput } from '../../components/ui/Field';
 
 export function CreateOrganization() {
   const navigate = useNavigate();
@@ -36,27 +39,26 @@ export function CreateOrganization() {
   }
 
   return (
-    <main>
-      <h1>Crear organización</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="org-name">Nombre</label>
-        <input id="org-name" required value={name} onChange={(event) => setName(event.target.value)} />
+    <div className="max-w-[560px] p-7">
+      <h1 className="mb-5 text-[22px] font-extrabold tracking-tight">Crear organización</h1>
+      <Card className="p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FormInput id="org-name" label="Nombre" required value={name} onChange={(event) => setName(event.target.value)} />
+          <FormInput id="org-timezone" label="Zona horaria" required value={timezone} onChange={(event) => setTimezone(event.target.value)} />
+          <FormInput id="org-currency" label="Moneda" required value={currency} onChange={(event) => setCurrency(event.target.value)} />
+          <FormInput id="org-language" label="Idioma" required value={language} onChange={(event) => setLanguage(event.target.value)} />
 
-        <label htmlFor="org-timezone">Zona horaria</label>
-        <input id="org-timezone" required value={timezone} onChange={(event) => setTimezone(event.target.value)} />
+          {error && (
+            <p role="alert" className="font-semibold text-red-text">
+              {error}
+            </p>
+          )}
 
-        <label htmlFor="org-currency">Moneda</label>
-        <input id="org-currency" required value={currency} onChange={(event) => setCurrency(event.target.value)} />
-
-        <label htmlFor="org-language">Idioma</label>
-        <input id="org-language" required value={language} onChange={(event) => setLanguage(event.target.value)} />
-
-        {error && <p role="alert">{error}</p>}
-
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Creando…' : 'Crear organización'}
-        </button>
-      </form>
-    </main>
+          <Button type="submit" variant="primary" disabled={submitting} className="self-start">
+            {submitting ? 'Creando…' : 'Crear organización'}
+          </Button>
+        </form>
+      </Card>
+    </div>
   );
 }

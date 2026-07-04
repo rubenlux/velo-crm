@@ -4,6 +4,9 @@ import { AuthApiError } from '../../services/auth-api';
 import { Membership, listMembers } from '../../services/organizations-api';
 import { Role, assignRole, grantPermission, listRoles, revokePermission, revokeRole } from '../../services/roles-api';
 import { getSession } from '../../services/session';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { FormSelect, FormInput } from '../../components/ui/Field';
 
 export function AssignRoles() {
   const { organizationId } = useParams<{ organizationId: string }>();
@@ -24,10 +27,7 @@ export function AssignRoles() {
     }
     setLoading(true);
     try {
-      const [membersList, rolesList] = await Promise.all([
-        listMembers(session.accessToken, organizationId),
-        listRoles(session.accessToken, organizationId),
-      ]);
+      const [membersList, rolesList] = await Promise.all([listMembers(session.accessToken, organizationId), listRoles(session.accessToken, organizationId)]);
       setMembers(membersList);
       setRoles(rolesList);
     } catch (err) {
@@ -40,7 +40,7 @@ export function AssignRoles() {
   useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, session]);
+  }, [organizationId, session?.accessToken]);
 
   async function withFeedback(action: () => Promise<void>) {
     if (!session || !organizationId) {
@@ -60,30 +60,29 @@ export function AssignRoles() {
     return null;
   }
   if (loading) {
-    return <p>Cargando roles y miembros…</p>;
+    return <p className="text-[13px] text-text-2">Cargando roles y miembros…</p>;
   }
 
   return (
-    <main>
-      <h1>Asignar roles y permisos</h1>
-      {error && <p role="alert">{error}</p>}
-      {status && <p role="status">{status}</p>}
+    <Card className="p-6">
+      <div className="mb-4 text-[15px] font-extrabold">Asignar roles y permisos adicionales</div>
+      {(error || status) && (
+        <p role={error ? 'alert' : 'status'} className={`mb-3 text-[12.5px] font-semibold ${error ? 'text-red-text' : 'text-green-text'}`}>
+          {error ?? status}
+        </p>
+      )}
 
-      <label>
-        Miembro
-        <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormSelect id="assign-member" label="Miembro" value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
           <option value="">Seleccionar…</option>
           {members.map((member) => (
             <option key={member.userId} value={member.userId}>
               {member.userId} ({member.role})
             </option>
           ))}
-        </select>
-      </label>
+        </FormSelect>
 
-      <label>
-        Rol adicional
-        <select value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
+        <FormSelect id="assign-role" label="Rol adicional" value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)}>
           <option value="">Seleccionar…</option>
           {roles.map((role) => (
             <option key={role.id} value={role.id}>
@@ -91,51 +90,27 @@ export function AssignRoles() {
               {role.organizationId ? ' (personalizado)' : ''}
             </option>
           ))}
-        </select>
-      </label>
+        </FormSelect>
+      </div>
 
-      <button
-        type="button"
-        disabled={!selectedUserId || !selectedRoleId}
-        onClick={() =>
-          withFeedback(() => assignRole(session.accessToken, organizationId!, selectedUserId, selectedRoleId))
-        }
-      >
-        Asignar rol
-      </button>
-      <button
-        type="button"
-        disabled={!selectedUserId || !selectedRoleId}
-        onClick={() =>
-          withFeedback(() => revokeRole(session.accessToken, organizationId!, selectedUserId, selectedRoleId))
-        }
-      >
-        Revocar rol
-      </button>
+      <div className="mt-3 flex gap-2">
+        <Button variant="secondary" size="sm" disabled={!selectedUserId || !selectedRoleId} onClick={() => withFeedback(() => assignRole(session.accessToken, organizationId!, selectedUserId, selectedRoleId))}>
+          Asignar rol
+        </Button>
+        <Button variant="secondary" size="sm" disabled={!selectedUserId || !selectedRoleId} onClick={() => withFeedback(() => revokeRole(session.accessToken, organizationId!, selectedUserId, selectedRoleId))}>
+          Revocar rol
+        </Button>
+      </div>
 
-      <label>
-        Permiso directo (recurso.acción)
-        <input value={permission} onChange={(e) => setPermission(e.target.value)} placeholder="lead.create" />
-      </label>
-
-      <button
-        type="button"
-        disabled={!selectedUserId || !permission}
-        onClick={() =>
-          withFeedback(() => grantPermission(session.accessToken, organizationId!, selectedUserId, permission))
-        }
-      >
-        Otorgar permiso
-      </button>
-      <button
-        type="button"
-        disabled={!selectedUserId || !permission}
-        onClick={() =>
-          withFeedback(() => revokePermission(session.accessToken, organizationId!, selectedUserId, permission))
-        }
-      >
-        Revocar permiso
-      </button>
-    </main>
+      <div className="mt-5 flex flex-wrap items-end gap-3">
+        <FormInput id="assign-permission" label="Permiso directo (recurso.acción)" value={permission} onChange={(e) => setPermission(e.target.value)} placeholder="lead.create" className="min-w-[200px] flex-1" />
+        <Button variant="secondary" size="sm" disabled={!selectedUserId || !permission} onClick={() => withFeedback(() => grantPermission(session.accessToken, organizationId!, selectedUserId, permission))}>
+          Otorgar
+        </Button>
+        <Button variant="secondary" size="sm" disabled={!selectedUserId || !permission} onClick={() => withFeedback(() => revokePermission(session.accessToken, organizationId!, selectedUserId, permission))}>
+          Revocar
+        </Button>
+      </div>
+    </Card>
   );
 }

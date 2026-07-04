@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AuthApiError } from '../../services/auth-api';
 import {
   AuditLogEntry,
@@ -12,6 +12,9 @@ import {
   updateTaxSettings,
 } from '../../services/organizations-api';
 import { getSession, setActiveOrganizationId } from '../../services/session';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { FormInput } from '../../components/ui/Field';
 
 const AVAILABLE_MODULES = ['crm', 'agenda', 'facturacion', 'inventario', 'rrhh', 'automatizaciones'];
 
@@ -68,24 +71,17 @@ export function OrganizationSettings() {
     }
 
     void load();
-  }, [organizationId, session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationId, session?.accessToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session || !organizationId) {
-      return;
-    }
+    if (!session || !organizationId) return;
     setError(null);
     setStatus(null);
     setSubmitting(true);
-
     try {
-      const updated = await updateOrganization(session.accessToken, organizationId, {
-        name,
-        timezone,
-        currency,
-        language,
-      });
+      const updated = await updateOrganization(session.accessToken, organizationId, { name, timezone, currency, language });
       setOrganization(updated);
       setStatus('Cambios guardados.');
     } catch (err) {
@@ -97,18 +93,12 @@ export function OrganizationSettings() {
 
   async function handleBrandingSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session || !organizationId) {
-      return;
-    }
+    if (!session || !organizationId) return;
     setError(null);
     setStatus(null);
     setSubmitting(true);
-
     try {
-      const updated = await updateBranding(session.accessToken, organizationId, {
-        logoUrl: logoUrl || undefined,
-        customDomain: customDomain || undefined,
-      });
+      const updated = await updateBranding(session.accessToken, organizationId, { logoUrl: logoUrl || undefined, customDomain: customDomain || undefined });
       setOrganization(updated);
       setStatus('Branding actualizado.');
     } catch (err) {
@@ -120,12 +110,9 @@ export function OrganizationSettings() {
 
   async function handleTaxSettingsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session || !organizationId) {
-      return;
-    }
+    if (!session || !organizationId) return;
     setError(null);
     setStatus(null);
-
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(taxSettingsText);
@@ -133,7 +120,6 @@ export function OrganizationSettings() {
       setError('Los impuestos deben ser un JSON válido.');
       return;
     }
-
     setSubmitting(true);
     try {
       const updated = await updateTaxSettings(session.accessToken, organizationId, parsed);
@@ -147,20 +133,15 @@ export function OrganizationSettings() {
   }
 
   function toggleModule(module: string) {
-    setEnabledModules((current) =>
-      current.includes(module) ? current.filter((m) => m !== module) : [...current, module],
-    );
+    setEnabledModules((current) => (current.includes(module) ? current.filter((m) => m !== module) : [...current, module]));
   }
 
   async function handleModulesSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session || !organizationId) {
-      return;
-    }
+    if (!session || !organizationId) return;
     setError(null);
     setStatus(null);
     setSubmitting(true);
-
     try {
       const updated = await updateModules(session.accessToken, organizationId, enabledModules);
       setOrganization(updated);
@@ -172,107 +153,92 @@ export function OrganizationSettings() {
     }
   }
 
-  if (!session) {
-    return null;
-  }
-  if (loading) {
-    return <p>Cargando organización…</p>;
-  }
+  if (!session) return null;
+  if (loading) return <p className="text-[13px] text-text-2">Cargando organización…</p>;
   if (!organization) {
-    return <p role="alert">{error ?? 'Organización no encontrada.'}</p>;
+    return <p className="font-semibold text-red-text">{error ?? 'Organización no encontrada.'}</p>;
   }
 
   return (
-    <main>
-      <h1>Configuración de {organization.name}</h1>
-      <p>
-        <Link to={`/organizations/${organization.id}/members`}>Miembros</Link>
-        {' · '}
-        <Link to={`/organizations/${organization.id}/plan`}>Plan y facturación</Link>
-      </p>
-      {error && <p role="alert">{error}</p>}
-      {status && <p role="status">{status}</p>}
+    <div className="flex flex-col gap-4">
+      {(error || status) && (
+        <p role={error ? 'alert' : 'status'} className={`text-[12.5px] font-semibold ${error ? 'text-red-text' : 'text-green-text'}`}>
+          {error ?? status}
+        </p>
+      )}
 
-      <form onSubmit={handleSubmit}>
-        <h2>Datos generales</h2>
-        <label htmlFor="settings-name">Nombre</label>
-        <input id="settings-name" value={name} onChange={(event) => setName(event.target.value)} />
+      <Card className="p-6">
+        <div className="mb-4 text-[15px] font-extrabold">Datos generales</div>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormInput id="settings-name" label="Nombre" value={name} onChange={(event) => setName(event.target.value)} />
+          <FormInput id="settings-timezone" label="Zona horaria" value={timezone} onChange={(event) => setTimezone(event.target.value)} />
+          <FormInput id="settings-currency" label="Moneda" value={currency} onChange={(event) => setCurrency(event.target.value)} />
+          <FormInput id="settings-language" label="Idioma" value={language} onChange={(event) => setLanguage(event.target.value)} />
+          <div className="sm:col-span-2">
+            <Button type="submit" variant="primary" disabled={submitting}>
+              {submitting ? 'Guardando…' : 'Guardar cambios'}
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-        <label htmlFor="settings-timezone">Zona horaria</label>
-        <input id="settings-timezone" value={timezone} onChange={(event) => setTimezone(event.target.value)} />
+      <Card className="p-6">
+        <div className="mb-4 text-[15px] font-extrabold">Branding</div>
+        <form onSubmit={handleBrandingSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormInput id="settings-logo" label="Logo (URL)" value={logoUrl} onChange={(event) => setLogoUrl(event.target.value)} />
+          <FormInput id="settings-domain" label="Dominio personalizado" value={customDomain} onChange={(event) => setCustomDomain(event.target.value)} />
+          <div className="sm:col-span-2">
+            <Button type="submit" variant="secondary" disabled={submitting}>
+              Guardar branding
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-        <label htmlFor="settings-currency">Moneda</label>
-        <input id="settings-currency" value={currency} onChange={(event) => setCurrency(event.target.value)} />
-
-        <label htmlFor="settings-language">Idioma</label>
-        <input id="settings-language" value={language} onChange={(event) => setLanguage(event.target.value)} />
-
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-      </form>
-
-      <form onSubmit={handleBrandingSubmit}>
-        <h2>Branding</h2>
-        <label htmlFor="settings-logo">Logo (URL)</label>
-        <input id="settings-logo" value={logoUrl} onChange={(event) => setLogoUrl(event.target.value)} />
-
-        <label htmlFor="settings-domain">Dominio personalizado</label>
-        <input
-          id="settings-domain"
-          value={customDomain}
-          onChange={(event) => setCustomDomain(event.target.value)}
-        />
-
-        <button type="submit" disabled={submitting}>
-          Guardar branding
-        </button>
-      </form>
-
-      <form onSubmit={handleTaxSettingsSubmit}>
-        <h2>Impuestos</h2>
-        <label htmlFor="settings-tax">Configuración de impuestos (JSON)</label>
-        <textarea
-          id="settings-tax"
-          value={taxSettingsText}
-          onChange={(event) => setTaxSettingsText(event.target.value)}
-          rows={4}
-        />
-
-        <button type="submit" disabled={submitting}>
-          Guardar impuestos
-        </button>
-      </form>
-
-      <form onSubmit={handleModulesSubmit}>
-        <h2>Módulos habilitados</h2>
-        {AVAILABLE_MODULES.map((module) => (
-          <label key={module} htmlFor={`module-${module}`}>
-            <input
-              id={`module-${module}`}
-              type="checkbox"
-              checked={enabledModules.includes(module)}
-              onChange={() => toggleModule(module)}
-            />
-            {module}
+      <Card className="p-6">
+        <div className="mb-4 text-[15px] font-extrabold">Impuestos</div>
+        <form onSubmit={handleTaxSettingsSubmit}>
+          <label htmlFor="settings-tax" className="mb-1.5 block text-[11.5px] font-bold text-text-2">
+            Configuración de impuestos (JSON)
           </label>
+          <textarea
+            id="settings-tax"
+            value={taxSettingsText}
+            onChange={(event) => setTaxSettingsText(event.target.value)}
+            rows={4}
+            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-[12px] outline-none focus:border-accent focus:bg-surface"
+          />
+          <Button type="submit" variant="secondary" disabled={submitting} className="mt-3">
+            Guardar impuestos
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="p-6">
+        <div className="mb-4 text-[15px] font-extrabold">Módulos habilitados</div>
+        <form onSubmit={handleModulesSubmit}>
+          <div className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
+            {AVAILABLE_MODULES.map((module) => (
+              <label key={module} htmlFor={`module-${module}`} className="flex items-center gap-2 text-[13px] font-semibold">
+                <input id={`module-${module}`} type="checkbox" checked={enabledModules.includes(module)} onChange={() => toggleModule(module)} />
+                {module}
+              </label>
+            ))}
+          </div>
+          <Button type="submit" variant="secondary" disabled={submitting}>
+            Guardar módulos
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-border px-5 py-4 text-[15px] font-extrabold">Audit Log</div>
+        {auditLog.slice(0, 20).map((entry) => (
+          <div key={entry.id} className="border-b border-border px-5 py-2.5 text-[12.5px] last:border-b-0">
+            <span className="text-text-3">{new Date(entry.occurredAt).toLocaleString()}</span> — <span className="font-semibold">{entry.action}</span>
+          </div>
         ))}
-
-        <button type="submit" disabled={submitting}>
-          Guardar módulos
-        </button>
-      </form>
-
-      <section>
-        <h2>Audit Log</h2>
-        <ul>
-          {auditLog.map((entry) => (
-            <li key={entry.id}>
-              {new Date(entry.occurredAt).toLocaleString()} — {entry.action}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+      </Card>
+    </div>
   );
 }

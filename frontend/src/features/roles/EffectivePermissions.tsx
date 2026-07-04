@@ -4,6 +4,9 @@ import { AuthApiError } from '../../services/auth-api';
 import { Membership, listMembers } from '../../services/organizations-api';
 import { getEffectivePermissions } from '../../services/roles-api';
 import { getSession } from '../../services/session';
+import { Card } from '../../components/ui/Card';
+import { FormSelect } from '../../components/ui/Field';
+import { Badge } from '../../components/ui/Badge';
 
 export function EffectivePermissions() {
   const { organizationId } = useParams<{ organizationId: string }>();
@@ -33,7 +36,7 @@ export function EffectivePermissions() {
     }
     void loadMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, session]);
+  }, [organizationId, session?.accessToken]);
 
   useEffect(() => {
     async function loadPermissions() {
@@ -51,41 +54,44 @@ export function EffectivePermissions() {
     }
     void loadPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, selectedUserId, session]);
+  }, [organizationId, selectedUserId, session?.accessToken]);
 
   if (!session) {
     return null;
   }
   if (loading) {
-    return <p>Cargando miembros…</p>;
+    return <p className="text-[13px] text-text-2">Cargando miembros…</p>;
   }
 
   return (
-    <main>
-      <h1>Permisos efectivos</h1>
-      {error && <p role="alert">{error}</p>}
+    <Card className="p-6">
+      <div className="mb-4 text-[15px] font-extrabold">Permisos efectivos</div>
+      {error && (
+        <p role="alert" className="mb-3 text-[12.5px] font-semibold text-red-text">
+          {error}
+        </p>
+      )}
 
-      <label>
-        Miembro
-        <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
-          <option value={session.user.id}>Yo</option>
-          {members
-            .filter((member) => member.userId !== session.user.id)
-            .map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.userId} ({member.role})
-              </option>
-            ))}
-        </select>
-      </label>
+      <FormSelect id="effective-member" label="Miembro" value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="max-w-[320px]">
+        <option value={session.user.id}>Yo</option>
+        {members
+          .filter((member) => member.userId !== session.user.id)
+          .map((member) => (
+            <option key={member.userId} value={member.userId}>
+              {member.userId} ({member.role})
+            </option>
+          ))}
+      </FormSelect>
 
       {permissions && (
-        <ul>
+        <div className="mt-4 flex flex-wrap gap-1.5">
           {permissions.map((permission) => (
-            <li key={permission}>{permission}</li>
+            <Badge key={permission} tone="neutral">
+              {permission}
+            </Badge>
           ))}
-        </ul>
+        </div>
       )}
-    </main>
+    </Card>
   );
 }

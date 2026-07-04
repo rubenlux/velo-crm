@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { requestPasswordReset } from '../../services/auth-api';
+import { AuthLayout, AuthInput, AuthSubmit } from './AuthLayout';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -21,31 +22,23 @@ export function ForgotPassword() {
 
   if (submitted) {
     return (
-      <main>
-        <h1>Revisá tu email</h1>
-        <p>Si el email existe, te enviamos un enlace para restablecer tu contraseña.</p>
-        <Link to="/login">Volver a iniciar sesión</Link>
-      </main>
+      <AuthLayout title="Revisá tu email" subtitle="Si el email existe, te enviamos un enlace para restablecer tu contraseña.">
+        <Link to="/login" className="text-[12.5px] font-bold text-accent">
+          Volver a iniciar sesión
+        </Link>
+      </AuthLayout>
     );
   }
 
   return (
-    <main>
-      <h1>Olvidé mi contraseña</h1>
+    <AuthLayout title="Olvidé mi contraseña">
       <form onSubmit={handleSubmit}>
-        <label htmlFor="forgot-email">Email</label>
-        <input
-          id="forgot-email"
-          type="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Enviando…' : 'Enviar enlace'}
-        </button>
+        <AuthInput id="forgot-email" label="Email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        <AuthSubmit submitting={submitting}>{submitting ? 'Enviando…' : 'Enviar enlace'}</AuthSubmit>
       </form>
-      <Link to="/login">Volver a iniciar sesión</Link>
-    </main>
+      <Link to="/login" className="mt-5 block text-center text-[12.5px] font-bold text-accent">
+        Volver a iniciar sesión
+      </Link>
+    </AuthLayout>
   );
 }

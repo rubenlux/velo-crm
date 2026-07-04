@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthApiError, register } from '../../services/auth-api';
 import { OAuthButtons } from './OAuthButtons';
+import { AuthLayout, AuthInput, AuthError, AuthSubmit } from './AuthLayout';
 
 export function Register() {
   const navigate = useNavigate();
@@ -26,21 +27,12 @@ export function Register() {
   }
 
   return (
-    <main>
-      <h1>Crear cuenta</h1>
+    <AuthLayout title="Crear cuenta">
       <form onSubmit={handleSubmit}>
-        <label htmlFor="register-email">Email</label>
-        <input
-          id="register-email"
-          type="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-
-        <label htmlFor="register-password">Contraseña</label>
-        <input
+        <AuthInput id="register-email" label="Email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        <AuthInput
           id="register-password"
+          label="Contraseña"
           type="password"
           required
           minLength={8}
@@ -48,16 +40,17 @@ export function Register() {
           onChange={(event) => setPassword(event.target.value)}
         />
 
-        {error && <p role="alert">{error}</p>}
+        {error && <AuthError>{error}</AuthError>}
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Creando cuenta…' : 'Crear cuenta'}
-        </button>
+        <AuthSubmit submitting={submitting}>{submitting ? 'Creando cuenta…' : 'Crear cuenta'}</AuthSubmit>
       </form>
-      <p>
-        ¿Ya tenés cuenta? <Link to="/login">Iniciar sesión</Link>
+      <p className="mt-5 text-center text-[12.5px] font-semibold text-text-2">
+        ¿Ya tenés cuenta?{' '}
+        <Link to="/login" className="text-accent">
+          Iniciar sesión
+        </Link>
       </p>
       <OAuthButtons />
-    </main>
+    </AuthLayout>
   );
 }

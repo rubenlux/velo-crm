@@ -1,15 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthApiError } from '../../services/auth-api';
-import {
-  PermissionDefinition,
-  Role,
-  createCustomRole,
-  listAvailablePermissions,
-  listRoles,
-  updateCustomRole,
-} from '../../services/roles-api';
+import { PermissionDefinition, Role, createCustomRole, listAvailablePermissions, listRoles, updateCustomRole } from '../../services/roles-api';
 import { getSession } from '../../services/session';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { FormInput, FormSelect } from '../../components/ui/Field';
 
 export function RoleEditor() {
   const { organizationId, roleId } = useParams<{ organizationId: string; roleId?: string }>();
@@ -33,10 +29,7 @@ export function RoleEditor() {
       }
       setLoading(true);
       try {
-        const [roles, catalog] = await Promise.all([
-          listRoles(session.accessToken, organizationId),
-          listAvailablePermissions(session.accessToken, organizationId),
-        ]);
+        const [roles, catalog] = await Promise.all([listRoles(session.accessToken, organizationId), listAvailablePermissions(session.accessToken, organizationId)]);
         setDefaultRoles(roles.filter((role) => role.isDefault));
         setAvailablePermissions(catalog);
         if (roleId) {
@@ -55,16 +48,13 @@ export function RoleEditor() {
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, roleId, session]);
+  }, [organizationId, roleId, session?.accessToken]);
 
   function togglePermission(key: string) {
     setSelectedPermissions((current) => {
       const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -79,19 +69,11 @@ export function RoleEditor() {
     try {
       const permissions = [...selectedPermissions];
       if (isEditing && roleId) {
-        await updateCustomRole(session.accessToken, organizationId, roleId, {
-          name,
-          permissions,
-          inheritsFromRoleId: inheritsFromRoleId || null,
-        });
+        await updateCustomRole(session.accessToken, organizationId, roleId, { name, permissions, inheritsFromRoleId: inheritsFromRoleId || null });
       } else {
-        await createCustomRole(session.accessToken, organizationId, {
-          name,
-          permissions,
-          inheritsFromRoleId: inheritsFromRoleId || undefined,
-        });
+        await createCustomRole(session.accessToken, organizationId, { name, permissions, inheritsFromRoleId: inheritsFromRoleId || undefined });
       }
-      navigate(`/organizations/${organizationId}/roles`);
+      navigate(`/organizations/${organizationId}/settings/roles`);
     } catch (err) {
       setError(err instanceof AuthApiError ? err.message : 'No se pudo guardar el rol.');
     } finally {
@@ -103,7 +85,7 @@ export function RoleEditor() {
     return null;
   }
   if (loading) {
-    return <p>Cargando…</p>;
+    return <p className="p-7 text-text-2">Cargando…</p>;
   }
 
   // A permission already granted on this Role stays offered/checked even if its
@@ -111,48 +93,48 @@ export function RoleEditor() {
   // dropped, only hidden from new selection once the module is off).
   const checkboxOptions = [
     ...availablePermissions,
-    ...[...selectedPermissions]
-      .filter((key) => !availablePermissions.some((p) => p.key === key))
-      .map((key) => ({ key, module: null })),
+    ...[...selectedPermissions].filter((key) => !availablePermissions.some((p) => p.key === key)).map((key) => ({ key, module: null })),
   ];
 
   return (
-    <main>
-      <h1>{isEditing ? 'Editar rol' : 'Crear rol personalizado'}</h1>
-      {error && <p role="alert">{error}</p>}
+    <div className="max-w-[640px] p-7">
+      <h1 className="mb-5 text-[22px] font-extrabold tracking-tight">{isEditing ? 'Editar rol' : 'Crear rol personalizado'}</h1>
+      {error && (
+        <p role="alert" className="mb-4 font-semibold text-red-text">
+          {error}
+        </p>
+      )}
 
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="role-name">Nombre</label>
-        <input id="role-name" required value={name} onChange={(e) => setName(e.target.value)} />
+      <Card className="p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FormInput id="role-name" label="Nombre" required value={name} onChange={(e) => setName(e.target.value)} />
 
-        <fieldset>
-          <legend>Permisos</legend>
-          {checkboxOptions.map((permission) => (
-            <label key={permission.key}>
-              <input
-                type="checkbox"
-                checked={selectedPermissions.has(permission.key)}
-                onChange={() => togglePermission(permission.key)}
-              />
-              {permission.key}
-            </label>
-          ))}
-        </fieldset>
+          <fieldset>
+            <legend className="mb-2 text-[11.5px] font-bold text-text-2">Permisos</legend>
+            <div className="grid max-h-[320px] grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-border bg-surface-2 p-3">
+              {checkboxOptions.map((permission) => (
+                <label key={permission.key} className="flex items-center gap-2 text-[12.5px] font-mono">
+                  <input type="checkbox" checked={selectedPermissions.has(permission.key)} onChange={() => togglePermission(permission.key)} />
+                  {permission.key}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-        <label htmlFor="role-inherits">Hereda de (opcional)</label>
-        <select id="role-inherits" value={inheritsFromRoleId} onChange={(e) => setInheritsFromRoleId(e.target.value)}>
-          <option value="">Ninguno</option>
-          {defaultRoles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
+          <FormSelect id="role-inherits" label="Hereda de (opcional)" value={inheritsFromRoleId} onChange={(e) => setInheritsFromRoleId(e.target.value)}>
+            <option value="">Ninguno</option>
+            {defaultRoles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </FormSelect>
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Guardando…' : 'Guardar'}
-        </button>
-      </form>
-    </main>
+          <Button type="submit" variant="primary" disabled={submitting} className="self-start">
+            {submitting ? 'Guardando…' : 'Guardar'}
+          </Button>
+        </form>
+      </Card>
+    </div>
   );
 }

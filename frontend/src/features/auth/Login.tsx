@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthApiError, login, verifyMfa } from '../../services/auth-api';
 import { saveSession } from '../../services/session';
 import { OAuthButtons } from './OAuthButtons';
+import { AuthLayout, AuthInput, AuthError, AuthSubmit } from './AuthLayout';
 
 interface LocationState {
   justRegistered?: boolean;
@@ -62,51 +63,37 @@ export function Login() {
 
   if (mfaChallengeToken) {
     return (
-      <main>
-        <h1>Verificación en dos pasos</h1>
+      <AuthLayout title="Verificación en dos pasos" subtitle="Ingresá el código de tu app autenticadora.">
         <form onSubmit={handleMfaSubmit}>
-          <label htmlFor="mfa-code">Código de tu app autenticadora</label>
-          <input
+          <AuthInput
             id="mfa-code"
+            label="Código"
             inputMode="numeric"
             required
             value={mfaCode}
             onChange={(event) => setMfaCode(event.target.value)}
           />
-          {error && <p role="alert">{error}</p>}
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Verificando…' : 'Verificar'}
-          </button>
+          {error && <AuthError>{error}</AuthError>}
+          <AuthSubmit submitting={submitting}>{submitting ? 'Verificando…' : 'Verificar'}</AuthSubmit>
         </form>
-      </main>
+      </AuthLayout>
     );
   }
 
   return (
-    <main>
-      <h1>Iniciar sesión</h1>
-      {justRegistered && <p>Te enviamos un email para verificar tu cuenta.</p>}
-
+    <AuthLayout title="Iniciar sesión" subtitle={justRegistered ? 'Te enviamos un email para verificar tu cuenta.' : undefined}>
       <form onSubmit={handleSubmit}>
-        <label htmlFor="login-email">Email</label>
-        <input
-          id="login-email"
-          type="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-
-        <label htmlFor="login-password">Contraseña</label>
-        <input
+        <AuthInput id="login-email" label="Email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        <AuthInput
           id="login-password"
+          label="Contraseña"
           type="password"
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
 
-        <label htmlFor="login-remember-me">
+        <label htmlFor="login-remember-me" className="mb-4 flex items-center gap-2 text-[12.5px] font-semibold text-text-2">
           <input
             id="login-remember-me"
             type="checkbox"
@@ -116,19 +103,19 @@ export function Login() {
           Recordar sesión
         </label>
 
-        {error && <p role="alert">{error}</p>}
+        {error && <AuthError>{error}</AuthError>}
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Ingresando…' : 'Ingresar'}
-        </button>
+        <AuthSubmit submitting={submitting}>{submitting ? 'Ingresando…' : 'Ingresar'}</AuthSubmit>
       </form>
-      <p>
-        ¿No tenés cuenta? <Link to="/register">Crear cuenta</Link>
-      </p>
-      <p>
-        <Link to="/forgot-password">Olvidé mi contraseña</Link>
-      </p>
+      <div className="mt-5 flex flex-col items-center gap-2 text-[12.5px] font-semibold text-text-2">
+        <span>
+          ¿No tenés cuenta? <Link to="/register" className="text-accent">Crear cuenta</Link>
+        </span>
+        <Link to="/forgot-password" className="text-accent">
+          Olvidé mi contraseña
+        </Link>
+      </div>
       <OAuthButtons />
-    </main>
+    </AuthLayout>
   );
 }
