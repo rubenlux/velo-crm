@@ -80,7 +80,8 @@ describe('E2E: Leads quickstart (US1, US3)', () => {
       .expect(201);
     expect(converted.body.customer.name).toBe('Quickstart SA');
     expect(converted.body.contact.isPrimary).toBe(true);
-    expect(converted.body.opportunity).toMatchObject({ state: 'Abierta', stage: 'Nueva', leadId: lead.body.id });
+    expect(converted.body.opportunity).toMatchObject({ state: 'Abierta', leadId: lead.body.id });
+    expect(converted.body.opportunity.stage.name).toBe('Nueva');
 
     // Step 6: the Lead is Convertido and preserves its links (US3, Acceptance Scenario 2).
     const afterConvert = await request(server)

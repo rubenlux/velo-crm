@@ -228,6 +228,28 @@ enum AuditLogAction {
   LeadConverted
   LeadLost
   LeadReactivated
+  OpportunityCreated
+  OpportunityUpdated
+  OpportunityStageChanged
+  OpportunityOwnerChanged
+  OpportunityValueChanged
+  OpportunityWon
+  OpportunityLost
+  OpportunityReopened
+  OpportunityArchived
+  OpportunityRestored
+  ActivityCreated
+  ActivityUpdated
+  ActivityOwnerChanged
+  ActivityStatusChanged
+  ActivityCancelled
+  ActivityReactivated
+  ActivityResultRecorded
+  ActivityFollowUpScheduled
+  ActivityCommentAdded
+  ActivityCommentUpdated
+  ActivityCommentDeleted
+  ActivityAttachmentAdded
 }
 
 model Organization {
@@ -253,6 +275,9 @@ model Organization {
   contacts      Contact[]
   leads         Lead[]
   opportunities Opportunity[]
+  pipelines     Pipeline[]
+  activities    Activity[]
+  activityTypes ActivityType[]
 
   @@map("organizations")
 }
@@ -429,6 +454,7 @@ model Customer {
   history         CustomerHistory[]
   contacts        Contact[]
   opportunities   Opportunity[]
+  activities      Activity[]
 
   // NULLs don't count as duplicates in Postgres unique constraints (research.md #3):
   // multiple Customers without a taxId in the same Organization can coexist.
@@ -515,6 +541,7 @@ model Contact {
   mergedContacts Contact[]        @relation("ContactMerge")
   history        ContactHistory[]
   opportunities  Opportunity[]
+  activities     Activity[]
 
   @@index([organizationId, status])
   @@index([customerId])
@@ -608,6 +635,7 @@ model Lead {
   notes         LeadNote[]
   attachments   LeadAttachment[]
   opportunities Opportunity[]
+  activities    Activity[]
 
   @@index([organizationId, status])
   @@map("leads")
@@ -655,14 +683,14 @@ model LeadAttachment {
   @@map("lead_attachments")
 }
 
-// Opportunity: modelo MÍNIMO (research.md #10). Sin OpportunitiesModule (spec 011 no
-// implementada) — el único escritor es leads/infrastructure/opportunity-stub.repository.ts
-// (solo `create`). spec 011 absorberá la propiedad de esta tabla, agregando sus
-// propios campos (probabilidad, valor ponderado, configuración de Pipeline, KPIs) en
-// una migración propia.
+// Opportunities module (spec 011-opportunities)
+// See specs/011-opportunities/data-model.md for the source of truth.
+// Reforma la tabla Opportunity que spec 010 (Leads) había creado mínima (research.md
+// #10 de esa spec) — ver specs/011-opportunities/research.md #1, #4 para el porqué de
+// cada cambio. OpportunityState se mantiene tal cual (el ciclo de vida no es
+// configurable); el enum PipelineStage de spec 010 se ELIMINA, reemplazado por las
+// tablas Pipeline/PipelineStage de abajo (configurables por Organization, FR-004).
 
-// Valores tomados literalmente de specs/011-opportunities/spec.md Key Entities — esta
-// spec (010) solo escribe Abierta/Nueva.
 enum OpportunityState {
   Abierta
   Ganada
@@ -671,40 +699,225 @@ enum OpportunityState {
   Archivada
 }
 
-enum PipelineStage {
-  Nueva
-  Calificada
-  Descubrimiento
-  Propuesta
-  Negociacion
-  Cierre
-  Ganada
-  Perdida
+model Pipeline {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  // El creado por PipelineRepository.findOrCreateDefault (research.md #3) lo tiene en
+  // true; una Organization puede tener más de un Pipeline (Assumptions de spec.md).
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stages        PipelineStage[]
+  opportunities Opportunity[]
+
+  @@index([organizationId])
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id          String   @id @default(uuid())
+  pipelineId  String
+  name        String
+  order       Int
+  // true dispara state = Ganada/Perdida al mover una Oportunidad aquí, en vez de
+  // comparar por nombre (research.md #2) — estable ante renombres (FR-004).
+  isWonStage  Boolean  @default(false)
+  isLostStage Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+
+  @@index([pipelineId])
+  @@map("pipeline_stages")
 }
 
 model Opportunity {
-  id             String           @id @default(uuid())
-  organizationId String
-  customerId     String
-  contactId      String?
-  // No-null solo si se originó por conversión de un Lead (spec 011 Key Entities).
-  leadId         String?
-  name           String
-  ownerUserId    String?
-  estimatedValue Decimal?         @db.Decimal(14, 2)
-  state          OpportunityState @default(Abierta)
-  stage          PipelineStage    @default(Nueva)
-  source         String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                 String            @id @default(uuid())
+  organizationId     String
+  customerId         String
+  contactId          String?
+  // No-null solo si se originó por conversión de un Lead (spec 010).
+  leadId             String?
+  name               String
+  ownerUserId        String?
+  pipelineId         String
+  stageId            String
+  state              OpportunityState  @default(Abierta)
+  estimatedValue     Decimal?          @db.Decimal(14, 2)
+  // 0-100, "probabilidad de cierre" (FR-006); weightedValue se calcula en el use
+  // case, no se persiste (research.md #7).
+  probability        Int?
+  estimatedCloseDate DateTime?
+  priority           CustomerPriority  @default(medium)
+  competitor         String?
+  // Observaciones simples, no una tabla de notas ilimitadas (research.md #9).
+  notes              String?
+  tags               String[]          @default([])
+  source             String?
+  // Poblado al perder, restaurado y limpiado al reabrir (research.md #15) — mismo
+  // mecanismo que Lead.statusBeforeLost (spec 010).
+  stageBeforeLost    String?
+  // Poblado al archivar, restaurado y limpiado al restaurar (research.md #15).
+  // Archivar nunca toca stageId, así que no hace falta un stageBeforeArchive.
+  stateBeforeArchive OpportunityState?
+  version            Int               @default(1)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  contact      Contact?     @relation(fields: [contactId], references: [id])
-  lead         Lead?        @relation(fields: [leadId], references: [id])
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  contact      Contact?             @relation(fields: [contactId], references: [id])
+  lead         Lead?                @relation(fields: [leadId], references: [id])
+  pipeline     Pipeline             @relation(fields: [pipelineId], references: [id])
+  stage        PipelineStage        @relation(fields: [stageId], references: [id])
+  history      OpportunityHistory[]
+  activities   Activity[]
 
   @@index([organizationId, state])
   @@index([customerId])
   @@index([leadId])
+  @@index([pipelineId])
+  @@index([stageId])
   @@map("opportunities")
+}
+
+model OpportunityHistory {
+  id              String   @id @default(uuid())
+  opportunityId   String
+  changedByUserId String
+  changes         Json
+  changedAt       DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@map("opportunity_history")
+}
+
+// Activities module (spec 012-activities)
+// See specs/012-activities/data-model.md for the source of truth.
+
+enum ActivityStatus {
+  Pendiente
+  EnProceso
+  Finalizada
+  Cancelada
+}
+
+model ActivityType {
+  id             String   @id @default(uuid())
+  // null = tipo por defecto compartido, seedeado por DefaultActivityTypesSeeder
+  // (research.md #3, mismo patrón que Role.organizationId de spec 007).
+  organizationId String?
+  name           String
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  activities   Activity[]
+
+  @@unique([organizationId, name])
+  @@map("activity_types")
+}
+
+model Activity {
+  id             String   @id @default(uuid())
+  organizationId String
+  // Al menos una debe estar presente — CHECK agregado a mano en la migración
+  // (research.md #1, Prisma no puede expresar un CHECK multi-columna). Si se
+  // proveen varias a la vez, deben remitir al mismo Customer (research.md #2,
+  // FR-002a) — validado en la aplicación, no en la DB.
+  customerId     String?
+  contactId      String?
+  leadId         String?
+  opportunityId  String?
+  activityTypeId String
+  title          String
+  description    String?
+  scheduledAt    DateTime
+  durationMinutes Int?
+  status         ActivityStatus @default(Pendiente)
+  // Poblado al cancelar, restaurado y limpiado al reactivar (research.md #7) —
+  // mismo mecanismo que Lead.statusBeforeLost/Opportunity.stageBeforeLost.
+  statusBeforeCancel ActivityStatus?
+  priority       CustomerPriority @default(medium)
+  // Inmutable, poblado una sola vez al crear (research.md #5).
+  authorUserId   String
+  ownerUserId    String?
+  participantUserIds String[] @default([])
+  // Editable solo si status = Finalizada (research.md #12).
+  result         String?
+  finishedAt     DateTime?
+  // Auto-relación poblada por ScheduleFollowUpActivityUseCase (research.md #11).
+  originActivityId String?
+  tags           String[] @default([])
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  contact      Contact?           @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  lead         Lead?              @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  opportunity  Opportunity?       @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  activityType ActivityType       @relation(fields: [activityTypeId], references: [id])
+  originActivity Activity?        @relation("ActivityFollowUp", fields: [originActivityId], references: [id])
+  followUps    Activity[]         @relation("ActivityFollowUp")
+  history      ActivityHistory[]
+  comments     ActivityComment[]
+  attachments  ActivityAttachment[]
+
+  @@index([organizationId, status])
+  @@index([customerId])
+  @@index([contactId])
+  @@index([leadId])
+  @@index([opportunityId])
+  @@index([ownerUserId])
+  @@map("activities")
+}
+
+model ActivityHistory {
+  id              String   @id @default(uuid())
+  activityId      String
+  changedByUserId String
+  changes         Json
+  changedAt       DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@map("activity_history")
+}
+
+model ActivityComment {
+  id           String   @id @default(uuid())
+  activityId   String
+  authorUserId String
+  body         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@map("activity_comments")
+}
+
+model ActivityAttachment {
+  id               String   @id @default(uuid())
+  activityId       String
+  fileName         String
+  // Referencia externa; sin almacenamiento binario propio (research.md #10),
+  // mismo patrón que LeadAttachment (spec 010).
+  fileUrl          String
+  uploadedByUserId String
+  uploadedAt       DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@map("activity_attachments")
 }

@@ -11,6 +11,8 @@ import { DefaultRolesSeeder } from '../src/modules/roles/infrastructure/default-
 import { CustomersExceptionsFilter } from '../src/modules/customers/api/customers-exceptions.filter';
 import { ContactsExceptionsFilter } from '../src/modules/contacts/api/contacts-exceptions.filter';
 import { LeadsExceptionsFilter } from '../src/modules/leads/api/leads-exceptions.filter';
+import { OpportunitiesExceptionsFilter } from '../src/modules/opportunities/api/opportunities-exceptions.filter';
+import { ActivitiesExceptionsFilter } from '../src/modules/activities/api/activities-exceptions.filter';
 
 export async function createTestApp(): Promise<{ app: INestApplication; prisma: PrismaService }> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -25,6 +27,8 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     new CustomersExceptionsFilter(app.get(HttpAdapterHost)),
     new ContactsExceptionsFilter(app.get(HttpAdapterHost)),
     new LeadsExceptionsFilter(app.get(HttpAdapterHost)),
+    new OpportunitiesExceptionsFilter(app.get(HttpAdapterHost)),
+    new ActivitiesExceptionsFilter(app.get(HttpAdapterHost)),
   );
   await app.init();
   // Belt-and-suspenders alongside DefaultRolesSeeder's OnModuleInit hook (already
@@ -37,9 +41,23 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
 
 export async function resetDatabase(prisma: PrismaService): Promise<void> {
   await prisma.auditLog.deleteMany();
-  // opportunities before customers/contacts/leads — Opportunity.customerId is
-  // onDelete: Restrict (spec 010 data-model.md), same reasoning as Contact.customerId.
+  // Activities reference Customer/Contact/Lead/Opportunity con onDelete: Restrict —
+  // deben borrarse antes que cualquiera de esas (spec 012 research.md #1). Los tipos
+  // por defecto (organizationId = null), seedeados por DefaultActivityTypesSeeder,
+  // nunca se borran — mismo criterio que los Roles por defecto de spec 007.
+  await prisma.activityComment.deleteMany();
+  await prisma.activityAttachment.deleteMany();
+  await prisma.activityHistory.deleteMany();
+  await prisma.activity.deleteMany();
+  await prisma.activityType.deleteMany({ where: { organizationId: { not: null } } });
+  // opportunity_history/opportunities before customers/contacts/leads/pipelines —
+  // Opportunity.customerId is onDelete: Restrict (spec 010 data-model.md, same
+  // reasoning as Contact.customerId), and Opportunity.pipelineId/stageId are
+  // onDelete: Restrict too (spec 011 data-model.md).
+  await prisma.opportunityHistory.deleteMany();
   await prisma.opportunity.deleteMany();
+  await prisma.pipelineStage.deleteMany();
+  await prisma.pipeline.deleteMany();
   await prisma.leadAttachment.deleteMany();
   await prisma.leadNote.deleteMany();
   await prisma.leadHistory.deleteMany();

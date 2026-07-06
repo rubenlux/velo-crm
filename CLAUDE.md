@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/010-leads/plan.md (see also docs/implementation-plan.md
+specs/012-activities/plan.md (see also docs/implementation-plan.md
 for the overall project roadmap and tech stack).
 <!-- SPECKIT END -->
 
@@ -33,8 +33,10 @@ audit log, no-TODO/no-console.log quality gates).
 
 **Code status**: Specs 004 (Authentication & Identity), 005 (Organizations,
 Multi-Tenant), 006 (Users), 007 (Roles & Permissions), 008 (Customers), 009
-(Contacts) and 010 (Leads) are fully implemented — 160 backend tests passing (0
-frontend tests yet).
+(Contacts), 010 (Leads), 011 (Opportunities) and 012 (Activities) are fully
+implemented — 203 backend tests passing, plus real frontend pages for every spec
+through 012 (Dashboard/Pipeline/Tasks/Calendar/Reports/design-system pages are
+still the original mock, no backend yet).
 Spec 004: register/verify/login/logout, password reset/change, Google/Microsoft
 OAuth, session/device management, TOTP MFA. Spec 005: create/configure Organization
 with automatic Propietario Membership, branding/tax/modules by plan, invitations
@@ -63,9 +65,20 @@ next action + attachments (activity-type logging deferred to spec 012), a single
 transactional conversion into a Customer + primary Contact + a **minimal** Opportunity
 row (spec 011 isn't implemented yet — see the "Leads module" note below), lose/
 reactivate (restoring the exact pre-loss status), and search/timeline/batch import —
-see `specs/010-leads/research.md` and the "Leads module" note below. Everything else
-(specs 011-026) is spec-only, no implementation yet. Next up: **spec 011
-Opportunities**.
+see `specs/010-leads/research.md` and the "Leads module" note below. Spec 011
+(resolves spec 010's temporary Opportunity-table exception, does not introduce a new
+one): configurable Pipeline/PipelineStage per Organization with lazily-created
+defaults, Opportunity create/move-stage/reassign-owner, estimatedValue/probability
+with a query-time weighted value, win/lose/reopen/archive/restore lifecycle, live
+in-memory KPIs/forecast aggregation, and search/timeline — see
+`specs/011-opportunities/research.md` and the "Opportunities module" note below.
+Spec 012: Activity register/manage (cancel/reactivate) across one or more of
+{Customer, Contact, Lead, Opportunity}, result + next-activity scheduling,
+attachments + author-only-editable comments, automatic cross-entity timeline
+(resolved in the frontend, not the backend — see the "Activities module" note
+below), and global search/timeline — see `specs/012-activities/research.md`.
+Everything else (specs 013-026) is spec-only, no implementation yet. Next up:
+**spec 013 Tasks**.
 
 **Authorization architecture (deny-by-default, hardened after a security review)**:
 `AuthGuard` (identity) is registered globally as `APP_GUARD` in `AppModule` — every
@@ -139,14 +152,12 @@ resolving `linkToExistingCustomerId`/`linkToExistingContactId`, always validate 
 the already-org-scoped `CustomerRepository.findById`/`ContactRepository.findById` —
 never `tx.customer.findUniqueOrThrow({ where: { id } })` directly, which has no
 `organizationId` filter and was a real cross-tenant bug caught during this spec's own
-security review (fixed before merge). `Opportunity` is a **minimal**, temporarily-owned
-table (research.md #10): no Pipeline configuration, KPIs, or forecast — those are spec
-011's job. Its enum values (`OpportunityState`, `PipelineStage`) are copied verbatim
-from `specs/011-opportunities/spec.md` Key Entities so spec 011 won't need a migration
-just to add values already known today. The only writer is
-`leads/infrastructure/opportunity-stub.repository.ts` (`create` only) — when spec 011
-is implemented, its `OpportunitiesModule` takes over as owner and `LeadsModule` should
-switch to importing its real exported repository instead. "Registrar actividades"
+security review (fixed before merge). `Opportunity` creation during conversion now goes through the real
+`OpportunitiesModule` (spec 011) — `LeadsModule` imports it and `ConvertLeadUseCase`
+resolves a real `pipelineId`/`stageId` (via `PipelineRepository.findOrCreateDefault`)
+before creating the Opportunity inside its transaction; see the "Opportunities module"
+note below for how spec 011 took over ownership of this table from spec 010's
+original temporary, minimal version. "Registrar actividades"
 (calls/meetings/emails) has no implementation in this spec — spec 012 (Activities)
 explicitly claims sole ownership of that concept across Customer/Contact/Lead/
 Opportunity, and specs 008/009 already established the precedent of not building a
@@ -154,13 +165,108 @@ stand-in. Reuses `lead.*` permission keys (spec 007) — `lead.delete` stays unu
 since Leads have no destructive operation (FR-014 forbids physical deletion in every
 state).
 
-**Local dev DB**: Backend tests and the dev server both run against an isolated Docker
-container (`velo-test-db`, postgres:15-alpine, port 5433, user/pass `velo`/`velo`) —
-separate from any other local Postgres instance. Start it with `docker start
-velo-test-db` if stopped. `backend/.env` and `backend/.env.test` point to it.
-`backend/jest.config.js` sets `maxWorkers: 1` — tests share this one real DB and call
+**Opportunities module (spec 011)**: resolves spec 010's documented temporary
+exception rather than introducing a new one — replaces the minimal `Opportunity`
+table (enum `PipelineStage`, no configurable Pipeline) with real `Pipeline`/
+`PipelineStage` tables, and `LeadsModule` now imports `OpportunitiesModule` instead of
+using the deleted `opportunity-stub.repository.ts`. The default Pipeline (8 stages:
+Nueva/Calificada/Descubrimiento/Propuesta/Negociación/Cierre/Ganada/Perdida) is
+created lazily on first use (`PipelineRepository.findOrCreateDefault`) rather than
+hooked into Organization creation, to avoid `OrganizationsModule` (platform core)
+importing a domain module — guarded against a race between two concurrent
+first-time callers by a hand-written Postgres partial unique index
+(`pipelines_organization_default_unique ON pipelines (organizationId) WHERE
+isDefault = true`) plus a `try/catch` on Prisma's `P2002` in the repository, re-reading
+the winning row. `isWonStage`/`isLostStage` flags (not name-matching) drive
+`Opportunity.state` transitions, so an Admin renaming a stage never breaks Won/Lost
+detection. `stageBeforeLost`/`stateBeforeArchive` save-the-prior-value fields mirror
+spec 010's `Lead.statusBeforeLost` pattern for reversible transitions. `weightedValue`
+is always calculated at query time (`estimatedValue * probability / 100`), never
+persisted. KPIs/forecast are live in-memory aggregations over
+`OpportunityRepository.findAllForAggregation` — no caching, no materialized views.
+
+First spec to add **new** permission keys beyond reusing spec 007's pre-declared CRUD:
+`opportunity.edit_won` (editing a `Ganada` Opportunity) and
+`opportunity.manage_pipeline` (reconfiguring a Pipeline's stages) — checked inside the
+use case via `MembershipRepository` + `EffectivePermissionsService.hasPermission`,
+since `@RequirePermission` can't express "a different permission depending on the
+resource's current state." **A security review after initial implementation found and
+fixed a real bypass**: `UpdateOpportunityUseCase` only checked `state === 'Ganada'`
+literally, so `archive → PATCH (now Archivada) → restore` let a User without
+`opportunity.edit_won` edit the value/probability of an effectively-still-`Ganada`
+Opportunity; separately, `LoseOpportunityUseCase` moved a `Ganada` Opportunity
+straight to `Perdida` with no `edit_won` check at all, and neither `win` nor `lose`
+rejected an `Archivada` Opportunity the way `move-stage` already did. Fixed by
+checking `state === 'Ganada' || (state === 'Archivada' && stateBeforeArchive ===
+'Ganada')` in `update-opportunity.use-case.ts`, adding the same `edit_won` check to
+`lose-opportunity.use-case.ts`, and adding an `Archivada` guard to both `win`/`lose` —
+covered by `opportunities-won-bypass-guard.spec.ts`. Lesson: any new lifecycle
+use case that mutates an Opportunity must independently re-check both "is this
+Archivada" and "is this effectively Ganada", since there's no single guard/middleware
+enforcing it centrally.
+
+Two more bugs were found and fixed after initial delivery, both self-caught (not by
+a test failure): (1) `CreateOpportunityUseCase` never called
+`CustomerArchivedGuardService` — the guard spec 008 had forward-declared exactly for
+this purpose (FR-011 of spec 008: no new Opportunities on an archived Customer) —
+letting Opportunities be created on archived Customers; fixed by injecting the
+already-exported guard in place of a bare `findById`+null-check, covered by
+`opportunities-archived-customer-guard.spec.ts`. (2) The frontend's
+`OpportunityKpis.tsx` crashed on an org with no closed Opportunities yet, because
+`averageTicket`/`conversionRate`/`averageCloseTimeDays` are `number | null` from the
+backend but were rendered unguarded, and `byOwner`/`byStage` rows use the backend
+field name `totalValue`, not `value` as the frontend had typed it — both fixed;
+`npm run build` passing does not catch this class of backend/frontend shape drift,
+only opening the page (or checking the actual JSON) does.
+
+**Activities module (spec 012)**: first spec importing **four** Fase 2 domain
+modules at once (`CustomersModule`, `ContactsModule`, `LeadsModule`,
+`OpportunitiesModule`) — `Activity` has four nullable FKs
+(`customerId`/`contactId`/`leadId`/`opportunityId`, at least one required by a
+hand-written Postgres CHECK constraint, since Prisma can't express a multi-column
+CHECK in `schema.prisma`) validated against those modules' already-exported,
+org-scoped repositories. If more than one relation is provided at once, they must
+all resolve to the same Customer (a Lead's `convertedCustomerId` only counts if
+it's been converted) — enforced in `CreateActivityUseCase`/
+`ScheduleFollowUpActivityUseCase`, not at the DB level. `ActivityType` (the
+interaction catalog, configurable per Organization) follows `Role`'s pattern
+(shared default rows, `organizationId = null`, seeded idempotently by
+`DefaultActivityTypesSeeder`), not `Pipeline`'s (spec 011, real per-Organization
+table created lazily) — a type doesn't need its own per-Organization config the
+way a `PipelineStage` needs `order`/`isWonStage`/`isLostStage`. New permission key
+`activity.manage_types` (same tier as `opportunity.manage_pipeline`) gates
+creating custom types — remember to exclude it from `Gerente`/`Ventas`/`Soporte`'s
+`byResource([...])` calls in `permission-catalog.ts`, the same recurring gotcha as
+spec 011. Comments (`ActivityComment`) are editable/deletable **only by their
+author, with no exception for Propietario or any permission tier** — a deliberate
+Clarification answer, not an oversight; don't "fix" this into a permission check
+if touching this code later. The most significant architecture decision: Activities
+appearing automatically in a Customer/Contact/Lead/Opportunity's own timeline
+(FR-009) is resolved **in the frontend**, not by modifying those four modules'
+existing `Get<Entity>TimelineUseCase` — doing so would require those older modules
+to import `ActivitiesModule` back, creating this project's first module dependency
+cycle. Instead, `CustomerTimeline.tsx`/`ContactTimeline.tsx`/`LeadTimeline.tsx`/
+`OpportunityTimeline.tsx` additionally call the Activities search endpoint
+(`GET .../activities?customerId=X` etc.) and merge+sort client-side — zero backend
+changes to those four modules. A security review after implementation found no
+issues (unlike spec 011's, which found two real bugs) — see
+`specs/012-activities/research.md` for the full rationale of each design choice.
+
+**Local dev DB**: an isolated Docker container (`velo-test-db`, postgres:15-alpine,
+port 5433, user/pass `velo`/`velo`) — separate from any other local Postgres instance.
+Start it with `docker start velo-test-db` if stopped. **The container holds two
+separate databases, not one** (fixed 2026-07-04 after dev data kept disappearing):
+`velo_test` (used only by `backend/.env.test` / the Jest suite — `resetDatabase()`
+truncates it between every test case, so anything in it is expected to vanish) and
+`velo_dev` (used only by `backend/.env` / `nest start --watch` — stable, never
+touched by test runs, safe to register real accounts and leave data in). Both are
+kept in migration-sync manually: applying a new migration means running `npx prisma
+migrate deploy` once per database (it reads `DATABASE_URL` from `.env` by default, so
+re-point `DATABASE_URL` or pass `--schema`/env override to hit the other one).
+`backend/jest.config.js` sets `maxWorkers: 1` — tests share `velo_test` and call
 `resetDatabase()` between cases, so parallel workers would race and truncate tables
-mid-test.
+mid-test. Dev login for `velo_dev` (register your own, no seed script exists):
+`test@test.com` / `Test1234!` is already registered there as of this fix.
 
 **Prisma + Windows gotcha**: `npx prisma migrate dev` / `npx prisma generate` fails
 with `EPERM: operation not permitted, rename ...query_engine-windows.dll.node...` if

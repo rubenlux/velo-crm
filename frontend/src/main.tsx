@@ -12,7 +12,16 @@ import { CreateOrganization } from './features/organizations/CreateOrganization'
 import { OrganizationSwitcher } from './features/users/OrganizationSwitcher';
 import { RoleEditor } from './features/roles/RoleEditor';
 import { Dashboard } from './features/dashboard/Dashboard';
-import { Pipeline } from './features/pipeline/Pipeline';
+import { PipelineBoard } from './features/opportunities/PipelineBoard';
+import { OpportunityForm } from './features/opportunities/OpportunityForm';
+import { OpportunityDetail } from './features/opportunities/OpportunityDetail';
+import { OpportunityTimeline } from './features/opportunities/OpportunityTimeline';
+import { OpportunityKpis } from './features/opportunities/OpportunityKpis';
+import { PipelineSettings } from './features/opportunities/PipelineSettings';
+import { ActivitiesList } from './features/activities/ActivitiesList';
+import { ActivityForm } from './features/activities/ActivityForm';
+import { ActivityDetail } from './features/activities/ActivityDetail';
+import { ActivityTimeline } from './features/activities/ActivityTimeline';
 import { CustomersList } from './features/customers/CustomersList';
 import { CustomerForm } from './features/customers/CustomerForm';
 import { CustomerDetail } from './features/customers/CustomerDetail';
@@ -70,7 +79,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
         <Route path="/organizations/:organizationId" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="pipeline" element={<Pipeline />} />
+          <Route path="pipeline" element={<PipelineBoard />} />
+          <Route path="pipeline/new" element={<OpportunityForm />} />
+          <Route path="pipeline/kpis" element={<OpportunityKpis />} />
+          <Route path="pipeline/settings" element={<PipelineSettings />} />
+          <Route path="pipeline/:opportunityId" element={<OpportunityDetail />} />
+          <Route path="pipeline/:opportunityId/timeline" element={<OpportunityTimeline />} />
+
+          <Route path="activities" element={<ActivitiesList />} />
+          <Route path="activities/new" element={<ActivityForm />} />
+          <Route path="activities/:activityId" element={<ActivityDetail />} />
+          <Route path="activities/:activityId/timeline" element={<ActivityTimeline />} />
 
           <Route path="customers" element={<CustomersList />} />
           <Route path="customers/new" element={<CustomerForm />} />

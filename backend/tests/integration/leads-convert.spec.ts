@@ -62,8 +62,8 @@ describe('Convert a qualified Lead (US3, Acceptance Scenario 1)', () => {
       contactId: converted.body.contact.id,
       leadId: lead.body.id,
       state: 'Abierta',
-      stage: 'Nueva',
     });
+    expect(converted.body.opportunity.stage.name).toBe('Nueva');
 
     const fetchedCustomer = await request(app.getHttpServer())
       .get(`/api/v1/organizations/${organizationId}/customers/${converted.body.customer.id}`)

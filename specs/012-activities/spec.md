@@ -18,6 +18,20 @@ mencionadas como referencia en
 cómo se registra una Activity; esas specs solo consumen y muestran ese historial en su
 propia línea de tiempo. No redefine `Customer`, `Contact`, `Lead` ni `Opportunity`.
 
+## Clarifications
+
+### Session 2026-07-04
+
+- Q: La spec menciona tanto "autor" como "usuario responsable" para una Activity (Key Entities y FR-008). ¿Son el mismo usuario o dos campos independientes? → A: Campos independientes — `authorUserId` (quién la creó, inmutable, para auditoría) y `ownerUserId` (a quién está asignada, reasignable), mismo patrón que `Lead.ownerUserId`/`Opportunity.ownerUserId`.
+- Q: ¿Una Activity `Cancelada` puede volver a `Pendiente` (reactivarse)? → A: Sí — acción `reactivate: Cancelada → Pendiente`, mismo patrón que `Lead.reactivate`/`Opportunity.reopen`.
+- Q: Si una Activity se asocia a varias entidades a la vez (ej. Contact + Opportunity), ¿deben pertenecer al mismo Customer? → A: Sí — el sistema exige coherencia entre las entidades relacionadas asociadas simultáneamente (deben remitir al mismo Customer).
+- Q: ¿La prioridad de una Activity reutiliza la escala baja/media/alta ya usada en Customer/Lead/Opportunity, o necesita una escala propia? → A: Reutiliza la misma escala (baja/media/alta) — mismo `CustomerPriority` ya usado en las demás specs del CRM.
+- Q: ¿Los comentarios internos de una Activity son inmutables una vez publicados, o su autor puede editarlos/borrarlos? → A: Editable/borrable por su autor (no por cualquier otro usuario de la Organization).
+
+### Session 2026-07-05
+
+- Q: FR-011 solo menciona proteger de eliminación física a una Activity `Finalizada`. ¿Una Activity en `Pendiente`/`EnProceso`/`Cancelada` admite eliminación física, o tampoco, independientemente de su estado? → A: Ninguna Activity admite eliminación física en ningún estado. Para una Activity no finalizada, la única baja funcional disponible es la transición a `Cancelada`. Una Activity `Finalizada` tampoco admite DELETE físico. Razón: las Activities forman parte del historial operativo y de la línea de tiempo del CRM — permitir el borrado físico rompería trazabilidad, auditoría y las referencias que otras entidades (comentarios, Customer, Contact, Lead, Opportunity) mantienen hacia ellas.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Registrar y gestionar Activities (Priority: P1) 🎯
@@ -48,6 +62,8 @@ adjuntos, comentarios ni búsqueda.
    `Cancelada` sin eliminarse físicamente (RN-005).
 5. **Given** una Activity con más de un participante, **When** se registra, **Then**
    el sistema conserva la lista completa de participantes (RF-003).
+6. **Given** una Activity `Cancelada`, **When** el usuario la reactiva, **Then** vuelve
+   al estado `Pendiente` (ver Clarifications).
 
 ---
 
@@ -140,21 +156,30 @@ probarse buscando y filtrando por distintos atributos.
 
 ### Edge Cases
 
-- ¿Qué pasa si se intenta eliminar físicamente una Activity `Finalizada`? El sistema
-  MUST impedirlo (RN-005); solo existe cancelación como baja lógica para Activities no
-  finalizadas.
+- ¿Qué pasa si se intenta eliminar físicamente una Activity, en cualquier estado? El
+  sistema MUST impedirlo siempre (RN-005, FR-011) — ninguna Activity admite
+  eliminación física, ni siquiera `Pendiente`/`En proceso`/`Cancelada`; para una
+  Activity no finalizada, la única baja funcional disponible es la transición a
+  `Cancelada` (ver Clarifications, sesión 2026-07-05).
 - ¿Qué ocurre si se elimina o archiva la entidad relacionada (por ejemplo, un Customer
   archivado, spec 008)? El sistema MUST conservar las Activities asociadas visibles en
   modo solo lectura, igual que el resto de los datos de esa entidad.
 - ¿Qué pasa si una Activity no tiene ninguna entidad relacionada asociada? El sistema
   MUST impedirlo: toda Activity debe asociarse al menos a un Customer, Contact, Lead u
   Opportunity (RN-004 implica al menos una relación).
+- ¿Qué pasa si se asocian varias entidades relacionadas a la vez que no pertenecen al
+  mismo Customer (por ejemplo, un Contact de un Customer y una Opportunity de otro)? El
+  sistema MUST rechazarlo: todas las entidades relacionadas asociadas simultáneamente a
+  una misma Activity deben remitir al mismo Customer (ver Clarifications).
 - ¿Qué sucede si dos usuarios editan la misma Activity al mismo tiempo? El sistema MUST
   conservar el último cambio guardado sin corromper el registro, informando al segundo
   usuario que los datos se actualizaron.
 - ¿Qué pasa si se adjunta un archivo a una Activity y luego la Activity se cancela? El
   sistema MUST conservar el adjunto accesible, ya que la cancelación no elimina la
   Activity (RN-007).
+- ¿Qué pasa si un usuario intenta editar o eliminar un comentario interno que no es
+  suyo? El sistema MUST rechazarlo: solo el autor del comentario puede editarlo o
+  eliminarlo (ver Clarifications).
 
 ## Requirements *(mandatory)*
 
@@ -164,10 +189,16 @@ probarse buscando y filtrando por distintos atributos.
   título, descripción, fecha/hora, duración, estado y prioridad.
 - **FR-002**: El sistema MUST permitir asociar una Activity a uno o más de: Customer,
   Contact, Lead, Opportunity.
+- **FR-002a**: El sistema MUST exigir que, cuando se asocian varias entidades
+  relacionadas a la vez a una misma Activity, todas remitan al mismo Customer (ver
+  Clarifications).
 - **FR-003**: El sistema MUST permitir registrar múltiples participantes en una
   Activity.
 - **FR-004**: El sistema MUST permitir adjuntar documentos a una Activity.
 - **FR-005**: El sistema MUST permitir agregar comentarios internos a una Activity.
+- **FR-005a**: El sistema MUST permitir que el autor de un comentario interno lo edite
+  o lo elimine; ningún otro usuario (salvo lo ya cubierto por permisos de
+  administración) puede hacerlo (ver Clarifications).
 - **FR-006**: El sistema MUST permitir registrar el resultado de una Activity
   finalizada.
 - **FR-007**: El sistema MUST permitir programar una próxima Activity relacionada desde
@@ -181,8 +212,11 @@ probarse buscando y filtrando por distintos atributos.
   Organization, con un catálogo por defecto (Llamada, Reunión, Correo electrónico,
   Videollamada, Nota, Visita, Mensaje, Seguimiento, Presentación, Demostración,
   Capacitación, Otro).
-- **FR-011**: El sistema MUST impedir la eliminación física de una Activity
-  `Finalizada`.
+- **FR-011**: El sistema MUST impedir la eliminación física de una Activity, sin
+  importar su estado (`Pendiente`, `En proceso`, `Finalizada` o `Cancelada`) — ver
+  Clarifications, sesión 2026-07-05.
+- **FR-011a**: El sistema MUST permitir reactivar una Activity `Cancelada`,
+  devolviéndola al estado `Pendiente` (ver Clarifications).
 - **FR-012**: El sistema MUST registrar en el Audit Log la creación, modificación,
   cambio de estado, cancelación, finalización, comentarios y adjuntos de una Activity.
 - **FR-013**: El sistema MUST garantizar que las Activities de una Organization nunca
@@ -194,15 +228,21 @@ probarse buscando y filtrando por distintos atributos.
   [Domain Model](../../docs/domain-model.md)); posee autor, fecha y al menos una
   entidad relacionada. Atributos: información general (tipo, título, descripción,
   fecha/hora, duración, estado, prioridad), relaciones (Organization, Customer,
-  Contact, Lead, Opportunity, usuario responsable, participantes) e información
-  adicional (adjuntos, comentarios, resultado, próxima acción, etiquetas).
+  Contact, Lead, Opportunity, autor, usuario responsable, participantes) e información
+  adicional (adjuntos, comentarios, resultado, próxima acción, etiquetas). **Autor**
+  (`authorUserId`, quien la creó, inmutable) y **usuario responsable**
+  (`ownerUserId`, a quién está asignada, reasignable) son campos independientes —
+  mismo patrón que `Lead.ownerUserId`/`Opportunity.ownerUserId` (ver Clarifications).
 - **ActivityType**: Tipo de Activity, configurable por Organization (catálogo por
   defecto: Llamada, Reunión, Correo electrónico, Videollamada, Nota, Visita, Mensaje,
   Seguimiento, Presentación, Demostración, Capacitación, Otro).
 - **ActivityStatus**: Estado de la Activity: `Pendiente`, `En proceso`, `Finalizada`,
-  `Cancelada`.
+  `Cancelada` (reactivable a `Pendiente`, ver Clarifications).
+- **Prioridad**: reutiliza la misma escala baja/media/alta ya usada en Customer, Lead
+  y Opportunity (ver Clarifications) — no es un enum nuevo específico de Activity.
 - **Attachment**: Documento adjunto a una Activity.
-- **Comment**: Comentario interno asociado a una Activity.
+- **Comment**: Comentario interno asociado a una Activity; editable/eliminable solo
+  por su autor (ver Clarifications).
 - **Audit Log**: Registro inmutable de creación/modificación/cambio de estado/
   cancelación/finalización/comentarios/adjuntos de Activities.
 
@@ -220,7 +260,8 @@ probarse buscando y filtrando por distintos atributos.
   línea de tiempo sin pasos manuales adicionales.
 - **SC-005**: El 100% de las acciones de creación, modificación, cambio de estado,
   cancelación y finalización quedan registradas en el Audit Log.
-- **SC-006**: El 0% de las Activities `Finalizada` puede eliminarse físicamente.
+- **SC-006**: El 0% de las Activities, sin importar su estado, puede eliminarse
+  físicamente (ver Clarifications, sesión 2026-07-05).
 
 ## Assumptions
 

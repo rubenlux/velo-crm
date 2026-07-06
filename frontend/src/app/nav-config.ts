@@ -16,10 +16,10 @@ export interface NavGroup {
 
 // Ported from Diseño/_template.html's `rawGroups` (~line 1538 of the decoded Claude
 // Design export). Route targets are adapted from the mock's own shortcuts: `clientes`/
-// `contactos`/`prospectos` get real list/detail pages here (specs 008/009/010 are
-// implemented) instead of the mock's shared Kanban screen; everything else without a
-// real backend spec falls back to either the shared Pipeline mock (Opportunities,
-// spec 011) or the generic Module page.
+// `contactos`/`prospectos`/`crm`/`oportunidades`/`actividades` get real list/detail
+// pages here (specs 008-012 are implemented) instead of the mock's shared Kanban
+// screen or the mock calendar; everything else without a real backend spec falls
+// back to the generic Module page.
 export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Principal',
@@ -57,7 +57,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Trabajo',
     items: [
       { id: 'calendario', label: 'Calendario', icon: 'calendar', route: 'calendar' },
-      { id: 'actividades', label: 'Actividades', icon: 'activity', route: 'calendar' },
+      { id: 'actividades', label: 'Actividades', icon: 'activity', route: 'activities' },
       { id: 'tareas', label: 'Tareas', icon: 'check', route: 'tasks', badge: '8' },
       { id: 'workflows', label: 'Workflows', icon: 'workflow', route: 'm/workflows' },
       { id: 'documentos', label: 'Documentos', icon: 'folder', route: 'm/documentos' },

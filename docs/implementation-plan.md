@@ -182,8 +182,8 @@ Modules:
 - Customers ✅ **implementado** (2026-07-03) — ver estado abajo
 - Contacts ✅ **implementado** (2026-07-03) — ver estado abajo
 - Leads ✅ **implementado** (2026-07-04) — ver estado abajo
-- Opportunities (mínima — ver nota en el estado de Leads)
-- Activities
+- Opportunities ✅ **implementado** (2026-07-04) — ver estado abajo
+- Activities ✅ **implementado** (2026-07-05) — ver estado abajo
 - Tasks
 - Dashboard
 
@@ -192,8 +192,10 @@ Modules:
 Mapea a [specs/001-crm-fase1-clientes-pipeline/spec.md](../specs/001-crm-fase1-clientes-pipeline/spec.md)
 (superseded) y, por entidad, a
 [specs/008-customers/spec.md](../specs/008-customers/spec.md),
-[specs/009-contacts/spec.md](../specs/009-contacts/spec.md) y
-[specs/010-leads/spec.md](../specs/010-leads/spec.md).
+[specs/009-contacts/spec.md](../specs/009-contacts/spec.md),
+[specs/010-leads/spec.md](../specs/010-leads/spec.md),
+[specs/011-opportunities/spec.md](../specs/011-opportunities/spec.md) y
+[specs/012-activities/spec.md](../specs/012-activities/spec.md).
 
 ### Estado de implementación — Customers (spec 008)
 
@@ -299,6 +301,117 @@ resolviendo y validando ambos ids con los repositorios ya scoped
 (`CustomerRepository.findById`/`ContactRepository.findById`) **antes** de la
 transacción, rechazando con 400 si no pertenecen a la Organization del Lead — cubierto
 por un test dedicado (`leads-convert-link-cross-org.spec.ts`).
+
+### Estado de implementación — Opportunities (spec 011)
+
+Las 5 historias de usuario están implementadas y testeadas
+(`backend/src/modules/opportunities/`): Pipeline y etapas configurables por
+Organization (con etapas por defecto creadas perezosamente en el primer uso), alta y
+movimiento de Oportunidades en el pipeline con reasignación de responsable, valor
+estimado/probabilidad con valor ponderado calculado en el momento de la consulta,
+cierre (Ganada/Perdida) con reapertura restaurando exactamente la etapa previa a la
+pérdida y archivado/restauración, KPIs y forecast por período agregados en vivo (sin
+caché ni tabla materializada), y búsqueda global + línea de tiempo combinando
+`OpportunityHistory` con el `AuditLog` de plataforma. 22 tests nuevos (integration +
+E2E, incluidos los 3 de la regresión de seguridad de abajo) pasando contra la misma
+base Postgres real, para un total de 182 tests en el backend.
+
+**Resuelve, no introduce, una excepción de Modular by Design**: spec 010 (Leads) había
+dejado una tabla `Opportunity` mínima (enum `PipelineStage`, sin Pipeline configurable)
+como excepción documentada y temporal. Esta spec la reemplaza por los modelos reales
+(`Pipeline`, `PipelineStage`, `Opportunity` reformado con `pipelineId`/`stageId`/
+`probability`/`estimatedCloseDate`/etc.) y `LeadsModule` pasa a importar
+`OpportunitiesModule` en vez de usar el `OpportunityStubRepository` provisional — la
+Fase Foundational de esta spec migró `ConvertLeadUseCase` y volvió a correr toda la
+suite de Leads antes de tocar cualquier historia nueva, para no dejar spec 010 roto a
+mitad de camino (`specs/011-opportunities/research.md` #1, #4).
+
+El Pipeline por defecto (8 etapas: Nueva/Calificada/Descubrimiento/Propuesta/
+Negociación/Cierre/Ganada/Perdida) se crea de forma perezosa en el primer uso
+(`PipelineRepository.findOrCreateDefault`) en vez de engancharse a la creación de la
+Organization — evita que `OrganizationsModule` (core de plataforma) tenga que importar
+un módulo de dominio como `OpportunitiesModule`. Una condición de carrera real entre
+dos primeras llamadas concurrentes se encontró durante la implementación (no por un
+test que fallara) y se corrigió con un índice único parcial de Postgres
+(`pipelines_organization_default_unique ON pipelines (organizationId) WHERE
+isDefault = true`, agregado a mano en la migración) más un `try/catch` sobre el
+`P2002` de Prisma en el repositorio, releyendo la fila ganadora (research.md #3).
+
+Primera spec del proyecto que agrega **permission keys nuevas** más allá de reutilizar
+el CRUD que spec 007 ya había declarado: `opportunity.edit_won` (editar una
+Oportunidad `Ganada`) y `opportunity.manage_pipeline` (reconfigurar las etapas del
+Pipeline) — `Gerente` recibe la primera pero no la segunda, `Ventas` no recibe
+ninguna (research.md #6). Una revisión de seguridad post-implementación encontró y
+corrigió un bypass real de `opportunity.edit_won` antes de cerrar la spec: `archive →
+update (mientras Archivada) → restore` permitía editar el valor/probabilidad de una
+Oportunidad efectivamente `Ganada` porque `UpdateOpportunityUseCase` solo miraba
+`state === 'Ganada'` literal, y `LoseOpportunityUseCase` movía una Oportunidad
+`Ganada` directo a `Perdida` sin exigir el permiso especial. Se corrigió extendiendo
+el chequeo a "`Ganada`, o `Archivada` con `stateBeforeArchive = Ganada`", agregando el
+mismo chequeo a `lose`, y agregando la guarda de `Archivada` que a `win`/`lose` les
+faltaba (paridad con `move-stage`) — cubierto por
+`opportunities-won-bypass-guard.spec.ts` (3 tests).
+
+Un segundo fix post-entrega (encontrado 2026-07-05, mientras se investigaba spec 012):
+`CreateOpportunityUseCase` nunca llamó a `CustomerArchivedGuardService`, el servicio
+que spec 008 había declarado por adelantado exactamente para este propósito (FR-011
+de spec 008: sin nuevas Oportunidades sobre un Customer archivado) — se creaba una
+Oportunidad igual sobre un Customer archivado. Corregido inyectando ese guard ya
+exportado por `CustomersModule` (sin cambios de wiring); cubierto por
+`opportunities-archived-customer-guard.spec.ts` (2 tests). Ver
+`specs/011-opportunities/research.md` #16 para el detalle y la lección para specs
+futuras (verificar explícitamente que un servicio "forward-declared" realmente se
+llama, no solo que compila).
+
+### Estado de implementación — Activities (spec 012)
+
+Las 5 historias de usuario están implementadas y testeadas
+(`backend/src/modules/activities/`): registro/gestión de Activities (tipo, título,
+descripción, fecha/hora, duración, prioridad, participantes) asociadas a uno o más de
+{Customer, Contact, Lead, Opportunity} con cancelar/reactivar (mismo patrón que
+`Lead.lose`/`reactivate`), resultado sobre una Activity finalizada + próxima
+actividad programada heredando la entidad relacionada del origen, adjuntos +
+comentarios internos (editables/eliminables solo por su autor, sin excepción para
+Propietario), línea de tiempo automática de cada entidad relacionada (resuelta en el
+frontend, no en el backend) y búsqueda/filtrado global + línea de tiempo propia de
+la Activity. 19 tests nuevos (integration + E2E) pasando contra la misma base
+Postgres real, para un total de 203 tests en el backend.
+
+Primera spec de esta Fase que importa **cuatro** módulos de dominio de CRM a la vez
+(`CustomersModule`, `ContactsModule`, `LeadsModule`, `OpportunitiesModule`) para
+validar las FKs de `Activity` al crear/programar una próxima actividad. La decisión
+de diseño más importante de esta spec: para que las Activities de un Customer/
+Contact/Lead/Opportunity aparezcan automáticamente en SU línea de tiempo (FR-009),
+**no** se modificaron las 4 `Get<Entity>TimelineUseCase` ya enviadas (specs
+008-011) — eso habría obligado a esos módulos a importar `ActivitiesModule` de
+vuelta, creando el primer ciclo de dependencias del proyecto. En cambio,
+`CustomerTimeline.tsx`/`ContactTimeline.tsx`/`LeadTimeline.tsx`/
+`OpportunityTimeline.tsx` (ya existentes) llaman además al mismo endpoint de
+búsqueda de Activities (`GET .../activities?customerId=X`, etc.) y mergean+ordenan
+cronológicamente el resultado, sin ningún cambio de backend en esos 4 módulos
+(`specs/012-activities/research.md` #13).
+
+`ActivityType` (catálogo de interacciones configurable por Organization, FR-010)
+sigue el patrón de `Role` (spec 007) — filas compartidas (`organizationId = null`)
+seedeadas idempotentemente por `DefaultActivityTypesSeeder`, no el patrón de
+`Pipeline` (spec 011, tabla real *por Organization* creada perezosamente), porque
+un tipo de Activity no necesita configuración propia por Organization desde el
+primer uso como sí la necesita una `PipelineStage` (`order`/`isWonStage`/
+`isLostStage`). Primera key de permiso nueva desde spec 011:
+`activity.manage_types`, mismo criterio que `opportunity.manage_pipeline` (acción
+de administración de catálogo compartido, no CRUD normal).
+
+Una revisión de seguridad post-implementación confirmó, sin encontrar bugs nuevos:
+aislamiento por `organizationId` en los 5 repositorios nuevos (con re-validación en
+cada use case donde el repositorio de comentarios/adjuntos no filtra directamente
+por Organization); que el chequeo de autoría de comentarios no tiene ningún bypass,
+ni siquiera para Propietario (decisión deliberada de la Clarification, no un
+descuido); que `activity.manage_types` está correctamente excluido de
+`Gerente`/`Ventas`/`Soporte` en `DEFAULT_ROLE_PERMISSIONS` (mismo gotcha de
+`byResource()` ya documentado en spec 011); que la validación de coherencia de
+Customer entre entidades relacionadas (FR-002a) usa siempre los repositorios ya
+scoped por Organization, nunca una consulta directa sin filtrar; y que no existe
+ninguna ruta `DELETE` física sobre `Activity` en ningún estado.
 
 ---
 

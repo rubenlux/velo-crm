@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AuthApiError } from '../../services/auth-api';
-import { ContactTimelineEntry, getContactTimeline } from '../../services/contacts-api';
+import { getContactTimeline } from '../../services/contacts-api';
+import { searchActivities } from '../../services/activities-api';
 import { getSession } from '../../services/session';
-import { TimelineList } from '../../components/ui/TimelineList';
+import { TimelineList, TimelineEntryLike } from '../../components/ui/TimelineList';
 
 export function ContactTimeline() {
   const { organizationId, contactId } = useParams<{ organizationId: string; contactId: string }>();
   const session = getSession();
 
-  const [entries, setEntries] = useState<ContactTimelineEntry[]>([]);
+  const [entries, setEntries] = useState<TimelineEntryLike[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +21,22 @@ export function ContactTimeline() {
       }
       setLoading(true);
       try {
-        setEntries(await getContactTimeline(session.accessToken, organizationId, contactId));
+        // Las Activities de este Contact se agregan automáticamente (FR-009 de
+        // spec 012, research.md #13).
+        const [contactEntries, activitiesResult] = await Promise.all([
+          getContactTimeline(session.accessToken, organizationId, contactId),
+          searchActivities(session.accessToken, organizationId, { contactId }),
+        ]);
+        const activityEntries: TimelineEntryLike[] = activitiesResult.items.map((a) => ({
+          type: 'activity',
+          occurredAt: a.scheduledAt,
+          actorUserId: a.authorUserId,
+          detail: { title: a.title, activityTypeName: a.activityType.name, status: a.status },
+        }));
+        const merged = [...(contactEntries as TimelineEntryLike[]), ...activityEntries].sort(
+          (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
+        );
+        setEntries(merged);
       } catch (err) {
         setError(err instanceof AuthApiError ? err.message : 'No se pudo cargar la línea de tiempo.');
       } finally {

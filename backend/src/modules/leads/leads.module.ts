@@ -4,11 +4,11 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { RolesModule } from '../roles/roles.module';
 import { CustomersModule } from '../customers/customers.module';
 import { ContactsModule } from '../contacts/contacts.module';
+import { OpportunitiesModule } from '../opportunities/opportunities.module';
 import { LeadRepository } from './infrastructure/lead.repository';
 import { LeadHistoryRepository } from './infrastructure/lead-history.repository';
 import { LeadNoteRepository } from './infrastructure/lead-note.repository';
 import { LeadAttachmentRepository } from './infrastructure/lead-attachment.repository';
-import { OpportunityStubRepository } from './infrastructure/opportunity-stub.repository';
 import { CreateLeadUseCase } from './application/create-lead.use-case';
 import { UpdateLeadUseCase } from './application/update-lead.use-case';
 import { GetLeadUseCase } from './application/get-lead.use-case';
@@ -25,16 +25,16 @@ import { GetLeadTimelineUseCase } from './application/get-lead-timeline.use-case
 import { LeadsController } from './api/leads.controller';
 
 @Module({
-  // First module of Fase 2 with two Fase 2 dependencies at once (CustomersModule +
-  // ContactsModule), consumed by ConvertLeadUseCase (research.md #1, #10).
-  imports: [IdentityModule, OrganizationsModule, RolesModule, CustomersModule, ContactsModule],
+  // Depende de CustomersModule + ContactsModule (research.md #1 de spec 010) y ahora
+  // de OpportunitiesModule (spec 011 research.md #4) — ConvertLeadUseCase ya no usa
+  // un repositorio temporal, consume el módulo real.
+  imports: [IdentityModule, OrganizationsModule, RolesModule, CustomersModule, ContactsModule, OpportunitiesModule],
   controllers: [LeadsController],
   providers: [
     LeadRepository,
     LeadHistoryRepository,
     LeadNoteRepository,
     LeadAttachmentRepository,
-    OpportunityStubRepository,
     CreateLeadUseCase,
     UpdateLeadUseCase,
     GetLeadUseCase,

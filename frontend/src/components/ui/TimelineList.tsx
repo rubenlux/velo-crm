@@ -2,13 +2,17 @@ import { Icon } from '../../lib/icons';
 import { Card } from './Card';
 
 export interface TimelineEntryLike {
-  type: 'audit' | 'edit' | 'note';
+  type: 'audit' | 'edit' | 'note' | 'activity';
   occurredAt: string;
   actorUserId: string | null;
   detail: unknown;
 }
 
-function describe(entry: TimelineEntryLike): { title: string; icon: 'file' | 'check' | 'trending' | 'x' | 'note' } {
+function describe(entry: TimelineEntryLike): { title: string; icon: 'file' | 'check' | 'trending' | 'x' | 'note' | 'activity' } {
+  if (entry.type === 'activity') {
+    const { title, activityTypeName, status } = entry.detail as { title: string; activityTypeName: string; status: string };
+    return { title: `${activityTypeName}: ${title} (${status})`, icon: 'activity' };
+  }
   if (entry.type === 'note') {
     const { note } = entry.detail as { note: string };
     return { title: `Nota: ${note}`, icon: 'note' };
@@ -38,6 +42,28 @@ function describe(entry: TimelineEntryLike): { title: string; icon: 'file' | 'ch
     LeadConverted: 'Convertido en Cliente/Contacto/Oportunidad',
     LeadLost: 'Marcado como Perdido',
     LeadReactivated: 'Reactivado',
+    OpportunityCreated: 'Oportunidad creada',
+    OpportunityUpdated: 'Actualizada',
+    OpportunityStageChanged: 'Etapa actualizada',
+    OpportunityOwnerChanged: 'Responsable actualizado',
+    OpportunityValueChanged: 'Valor/probabilidad actualizados',
+    OpportunityWon: 'Marcada como Ganada',
+    OpportunityLost: 'Marcada como Perdida',
+    OpportunityReopened: 'Reabierta',
+    OpportunityArchived: 'Archivada',
+    OpportunityRestored: 'Restaurada',
+    ActivityCreated: 'Activity creada',
+    ActivityUpdated: 'Actualizada',
+    ActivityOwnerChanged: 'Responsable actualizado',
+    ActivityStatusChanged: 'Estado actualizado',
+    ActivityCancelled: 'Cancelada',
+    ActivityReactivated: 'Reactivada',
+    ActivityResultRecorded: 'Resultado registrado',
+    ActivityFollowUpScheduled: 'Próxima actividad programada',
+    ActivityCommentAdded: 'Comentario agregado',
+    ActivityCommentUpdated: 'Comentario editado',
+    ActivityCommentDeleted: 'Comentario eliminado',
+    ActivityAttachmentAdded: 'Adjunto agregado',
   };
   return { title: labels[action] ?? action, icon: action.includes('Archived') ? 'x' : action.includes('Created') ? 'check' : 'trending' };
 }

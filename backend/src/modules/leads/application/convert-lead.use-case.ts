@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Contact, Customer, Lead, LeadStatus, Opportunity } from '@prisma/client';
+import { Contact, Customer, Lead, LeadStatus } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { AuditLogPublisher } from '../../../shared/audit/audit-log.publisher';
 import { CustomerRepository } from '../../customers/infrastructure/customer.repository';
 import { ContactRepository } from '../../contacts/infrastructure/contact.repository';
+import { PipelineRepository } from '../../opportunities/infrastructure/pipeline.repository';
+import { PipelineStageRepository } from '../../opportunities/infrastructure/pipeline-stage.repository';
+import { OpportunityRepository, OpportunityWithStage } from '../../opportunities/infrastructure/opportunity.repository';
 import { LeadRepository } from '../infrastructure/lead.repository';
-import { OpportunityStubRepository } from '../infrastructure/opportunity-stub.repository';
 import {
   LeadAlreadyConvertedError,
   LeadConversionLinkNotFoundError,
@@ -31,7 +33,7 @@ export interface ConvertLeadResult {
   lead: Lead;
   customer: Customer;
   contact: Contact;
-  opportunity: Opportunity;
+  opportunity: OpportunityWithStage;
 }
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
@@ -50,7 +52,9 @@ export class ConvertLeadUseCase {
     private readonly leads: LeadRepository,
     private readonly customers: CustomerRepository,
     private readonly contacts: ContactRepository,
-    private readonly opportunities: OpportunityStubRepository,
+    private readonly pipelines: PipelineRepository,
+    private readonly pipelineStages: PipelineStageRepository,
+    private readonly opportunities: OpportunityRepository,
     private readonly auditLog: AuditLogPublisher,
   ) {}
 
@@ -93,6 +97,13 @@ export class ConvertLeadUseCase {
         throw new LeadConversionLinkNotFoundError();
       }
     }
+
+    // Pipeline por defecto perezoso (spec 011 research.md #3) — fuera de la
+    // transacción de abajo, es su propia operación idempotente (índice único
+    // parcial + catch, ver PipelineRepository.findOrCreateDefault).
+    const pipeline = await this.pipelines.findOrCreateDefault(input.organizationId);
+    const stages = await this.pipelineStages.findByPipelineId(pipeline.id);
+    const firstStage = stages[0];
 
     return this.prisma.$transaction(async (tx) => {
       const convertedCount = await this.leads.transitionIfStatusIn(
@@ -174,8 +185,9 @@ export class ConvertLeadUseCase {
           leadId: lead.id,
           name: lead.company ? `${lead.name} (${lead.company})` : lead.name,
           ownerUserId: lead.ownerUserId,
+          pipelineId: pipeline.id,
+          stageId: firstStage.id,
           state: 'Abierta',
-          stage: 'Nueva',
           source: 'Lead',
         },
         tx,
